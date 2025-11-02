@@ -1,228 +1,197 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="page-title">Dashboard</h2>
-                <p class="mt-1 text-sm text-gray-600">Bienvenido, {{ Auth::user()->name }}</p>
-            </div>
-            <div class="text-sm text-gray-600">
-                {{ now()->format('d/m/Y H:i') }}
-            </div>
-        </div>
+        <h2 class="font-bold text-2xl text-gray-900 leading-tight">
+            Dashboard
+        </h2>
     </x-slot>
 
-    @php
-        use App\Models\Client;
-        use App\Models\Lot;
-        use App\Models\Transaction;
-        use App\Models\Installment;
-        use Illuminate\Support\Facades\Cache;
-        use Illuminate\Support\Facades\DB;
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
-        // Cachear estadísticas por 5 minutos
-        $stats = Cache::remember('dashboard_stats', 300, function () {
-            return [
-                'total_clients'   => Client::count(),
-                'total_lots'      => Lot::count(),
-                'available_lots'  => Lot::where('status', 'disponible')->count(),
-                'sold_lots'       => Lot::where('status', 'vendido')->count(),
-                'monthly_income'  => Transaction::whereMonth('payment_date', now()->month)
-                                                ->whereYear('payment_date', now()->year)
-                                                ->sum('amount_paid'),
-            ];
-        });
+            <!-- Tarjetas de Estadísticas -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <x-dashboard.stat-card title="Total Clientes" :value="$stats['totalClients']" icon="clients" color="blue" />
+                <x-dashboard.stat-card title="Total Lotes" :value="$stats['totalLots']" icon="lots" color="green" />
+                <x-dashboard.stat-card title="Transacciones del Mes" :value="$stats['transactionsThisMonth']" icon="transactions" color="orange" />
+            </div>
 
-        // Cuotas vencidas optimizadas con joins
-        $overdueInstallments = Installment::select([
-                'installments.id',
-                'installments.due_date',
-                'installments.base_amount',
-                'installments.interest_amount',
-                'clients.name as client_name',
-                'lots.identifier as lot_identifier',
-                'services.name as service_name'
-            ])
-            ->join('payment_plans', 'installments.payment_plan_id', '=', 'payment_plans.id')
-            ->join('lots', 'payment_plans.lot_id', '=', 'lots.id')
-            ->join('clients', 'lots.client_id', '=', 'clients.id')
-            ->join('services', 'payment_plans.service_id', '=', 'services.id')
-            ->where('installments.status', 'vencida')
-            ->orderBy('installments.due_date', 'asc')
-            ->limit(5)
-            ->get()
-            ->map(function ($installment) {
-                $totalOwed = $installment->base_amount + $installment->interest_amount;
-                $totalPaid = DB::table('installment_transaction')
-                    ->where('installment_id', $installment->id)
-                    ->sum('amount_applied');
-                $installment->remaining = max(0, $totalOwed - $totalPaid);
-                return $installment;
-            })
-            ->filter(fn($inst) => $inst->remaining > 0.01);
-    @endphp
-
-    <div class="content-wrapper">
-        <!-- Estadísticas Rápidas -->
-        <div class="grid-responsive mb-6">
-            <!-- Total Clientes -->
-            <div class="stat-card">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="stat-label">Total de Clientes</p>
-                        <p class="stat-value">{{ $stats['total_clients'] }}</p>
-                    </div>
-                    <div class="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            <!-- Acciones Rápidas como Grid -->
+            <div class="bg-white border-2 border-gray-200 p-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                <div class="flex items-center justify-between mb-6 pb-3 border-b border-gray-100">
+                    <h4 class="font-semibold text-lg text-gray-900">Acciones Rápidas</h4>
+                    <a href="{{ route('transactions.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center group">
+                        Ver transacciones
+                        <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
-                    </div>
+                    </a>
                 </div>
-                <div class="mt-4 pt-4 border-t border-gray-200">
-                    <a href="{{ route('clients.index') }}" class="link text-sm">Ver todos los clientes →</a>
-                </div>
-            </div>
-
-            <!-- Total Lotes -->
-            <div class="stat-card">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="stat-label">Total de Lotes</p>
-                        <p class="stat-value">{{ $stats['total_lots'] }}</p>
-                    </div>
-                    <div class="h-12 w-12 rounded-full bg-success-100 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <!-- Nuevo Cliente -->
+                    <a href="{{ route('clients.create') }}" class="relative group overflow-hidden p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border-2 border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-blue-300 rounded-full -mr-10 -mt-10 opacity-20 group-hover:scale-150 transition-transform duration-500"></div>
+                        <svg class="w-5 h-5 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all absolute top-4 right-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
-                    </div>
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-200">
-                    <div class="flex items-center justify-between text-xs text-gray-600">
-                        <span>Disponibles: <strong>{{ $stats['available_lots'] }}</strong></span>
-                        <span>Vendidos: <strong>{{ $stats['sold_lots'] }}</strong></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Ingresos del Mes -->
-            <div class="stat-card">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="stat-label">Ingresos del Mes</p>
-                        <p class="stat-value">${{ number_format($stats['monthly_income'], 2) }}</p>
-                    </div>
-                    <div class="h-12 w-12 rounded-full bg-warning-100 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-200">
-                    <a href="{{ route('reports.income') }}" class="link text-sm">Ver reporte completo →</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Accesos Rápidos -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h3 class="section-title mb-0">Accesos Rápidos</h3>
-            </div>
-            <div class="card-body">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <a href="{{ route('clients.create') }}" class="group p-4 bg-gray-50 rounded-lg hover:bg-primary-50 hover:border-primary-200 border border-transparent transition-all duration-200">
-                        <div class="flex flex-col items-center text-center">
-                            <div class="h-12 w-12 rounded-full bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center mb-3 transition-colors">
-                                <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="relative z-10">
+                            <div class="bg-blue-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
                                 </svg>
                             </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-primary-700">Nuevo Cliente</span>
+                            <h5 class="font-bold text-gray-900 mb-1">Nuevo Cliente</h5>
+                            <p class="text-sm text-gray-600">Registrar cliente</p>
                         </div>
                     </a>
 
-                    <a href="{{ route('lots.create') }}" class="group p-4 bg-gray-50 rounded-lg hover:bg-success-50 hover:border-success-200 border border-transparent transition-all duration-200">
-                        <div class="flex flex-col items-center text-center">
-                            <div class="h-12 w-12 rounded-full bg-success-100 group-hover:bg-success-200 flex items-center justify-center mb-3 transition-colors">
-                                <svg class="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    <!-- Registrar Pago -->
+                    <a href="{{ route('transactions.create') }}" class="relative group overflow-hidden p-6 bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl border-2 border-green-200 hover:border-green-400 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-green-300 rounded-full -mr-10 -mt-10 opacity-20 group-hover:scale-150 transition-transform duration-500"></div>
+                        <svg class="w-5 h-5 text-green-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all absolute top-4 right-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <div class="relative z-10">
+                            <div class="bg-green-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                             </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-success-700">Nuevo Lote</span>
+                            <h5 class="font-bold text-gray-900 mb-1">Registrar Pago</h5>
+                            <p class="text-sm text-gray-600">Procesar pago</p>
                         </div>
                     </a>
 
-                    <a href="{{ route('transactions.create') }}" class="group p-4 bg-gray-50 rounded-lg hover:bg-warning-50 hover:border-warning-200 border border-transparent transition-all duration-200">
-                        <div class="flex flex-col items-center text-center">
-                            <div class="h-12 w-12 rounded-full bg-warning-100 group-hover:bg-warning-200 flex items-center justify-center mb-3 transition-colors">
-                                <svg class="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    <!-- Nuevo Lote -->
+                    <a href="{{ route('lots.create') }}" class="relative group overflow-hidden p-6 bg-gradient-to-br from-orange-50 to-amber-100 rounded-2xl border-2 border-orange-200 hover:border-orange-400 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-orange-300 rounded-full -mr-10 -mt-10 opacity-20 group-hover:scale-150 transition-transform duration-500"></div>
+                        <svg class="w-5 h-5 text-orange-400 group-hover:text-orange-600 group-hover:translate-x-1 transition-all absolute top-4 right-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <div class="relative z-10">
+                            <div class="bg-orange-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
                             </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-warning-700">Registrar Pago</span>
+                            <h5 class="font-bold text-gray-900 mb-1">Nuevo Lote</h5>
+                            <p class="text-sm text-gray-600">Agregar lote</p>
                         </div>
                     </a>
 
-                    <a href="{{ route('reports.income') }}" class="group p-4 bg-gray-50 rounded-lg hover:bg-danger-50 hover:border-danger-200 border border-transparent transition-all duration-200">
-                        <div class="flex flex-col items-center text-center">
-                            <div class="h-12 w-12 rounded-full bg-danger-100 group-hover:bg-danger-200 flex items-center justify-center mb-3 transition-colors">
-                                <svg class="w-6 h-6 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- Ver Reportes -->
+                    <a href="{{ route('reports.income') }}" class="relative group overflow-hidden p-6 bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl border-2 border-purple-200 hover:border-purple-400 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-purple-300 rounded-full -mr-10 -mt-10 opacity-20 group-hover:scale-150 transition-transform duration-500"></div>
+                        <svg class="w-5 h-5 text-purple-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all absolute top-4 right-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <div class="relative z-10">
+                            <div class="bg-purple-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
                             </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-danger-700">Ver Reportes</span>
+                            <h5 class="font-bold text-gray-900 mb-1">Ver Reportes</h5>
+                            <p class="text-sm text-gray-600">Consultar ingresos</p>
                         </div>
                     </a>
-                </div>
-            </div>
-        </div>
 
-        <!-- Cuotas Vencidas -->
-        @if($overdueInstallments->count() > 0)
-        <div class="card">
-            <div class="card-header">
-                <div class="flex items-center justify-between">
-                    <h3 class="section-title mb-0">Cuotas Vencidas</h3>
-                    <span class="badge-danger">{{ $overdueInstallments->count() }} vencidas</span>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="table-custom">
-                    <thead>
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Lote</th>
-                            <th>Servicio</th>
-                            <th>Vencimiento</th>
-                            <th>Monto</th>
-                            <th class="text-right">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($overdueInstallments as $installment)
-                            <tr>
-                                <td>
-                                    <div class="flex items-center">
-                                        <div class="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center mr-2">
-                                            <span class="text-primary-700 font-semibold text-xs">{{ substr($installment->client_name, 0, 1) }}</span>
-                                        </div>
-                                        <span class="text-gray-900">{{ $installment->client_name }}</span>
-                                    </div>
-                                </td>
-                                <td class="text-gray-600">{{ $installment->lot_identifier }}</td>
-                                <td class="text-gray-600">{{ $installment->service_name }}</td>
-                                <td class="text-danger-600 font-medium">{{ \Carbon\Carbon::parse($installment->due_date)->format('d/m/Y') }}</td>
-                                <td class="font-bold text-danger-600">${{ number_format($installment->remaining, 2) }}</td>
-                                <td class="text-right">
-                                    <a href="{{ route('transactions.create', ['installment_id' => $installment->id]) }}" class="btn-primary btn-sm">
-                                        Pagar
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+            
+            <!-- Resumen del Sistema -->
+            <div class="bg-white border-2 border-gray-200 p-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                 <h4 class="font-semibold text-lg text-gray-900 mb-7 pb-3 border-b border-gray-100">Resumen del Sistema</h4>
+                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="relative overflow-hidden p-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl border-2 border-green-200 hover:border-green-300 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-green-200 rounded-full -mr-12 -mt-12 opacity-30 group-hover:scale-110 transition-transform"></div>
+                        <p class="text-5xl font-extrabold text-green-600 mb-3 relative z-10">{{ $systemSummary['lotes_disponibles'] }}</p>
+                        <p class="text-sm font-semibold text-gray-700 relative z-10">Lotes Disponibles</p>
+                    </div>
+                     <div class="relative overflow-hidden p-6 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 rounded-2xl border-2 border-yellow-200 hover:border-yellow-300 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-200 rounded-full -mr-12 -mt-12 opacity-30 group-hover:scale-110 transition-transform"></div>
+                        <p class="text-5xl font-extrabold text-yellow-600 mb-3 relative z-10">{{ $systemSummary['lotes_vendidos'] }}</p>
+                        <p class="text-sm font-semibold text-gray-700 relative z-10">Lotes Vendidos</p>
+                    </div>
+                     <div class="relative overflow-hidden p-6 bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 rounded-2xl border-2 border-blue-200 hover:border-blue-300 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-blue-200 rounded-full -mr-12 -mt-12 opacity-30 group-hover:scale-110 transition-transform"></div>
+                        <p class="text-5xl font-extrabold text-blue-600 mb-3 relative z-10">{{ $systemSummary['lotes_liquidados'] }}</p>
+                        <p class="text-sm font-semibold text-gray-700 relative z-10">Lotes Liquidados</p>
+                    </div>
+                     <div class="relative overflow-hidden p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-2xl border-2 border-purple-200 hover:border-purple-300 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-purple-200 rounded-full -mr-12 -mt-12 opacity-30 group-hover:scale-110 transition-transform"></div>
+                        <p class="text-5xl font-extrabold text-purple-600 mb-3 relative z-10">{{ $systemSummary['servicios_activos'] }}</p>
+                        <p class="text-sm font-semibold text-gray-700 relative z-10">Servicios Activos</p>
+                    </div>
+                 </div>
             </div>
+
+            <!-- Cuotas Vencidas -->
+            <div class="bg-white border-2 border-gray-200 p-8 rounded-xl shadow-md">
+                <h4 class="font-semibold text-lg text-gray-900 mb-6 pb-3 border-b border-gray-100">
+                    Cuotas Vencidas
+                </h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">Cliente</th>
+                                <th scope="col" class="px-6 py-3">Lote</th>
+                                <th scope="col" class="px-6 py-3"># Cuota</th>
+                                <th scope="col" class="px-6 py-3">Vencimiento</th>
+                                <th scope="col" class="px-6 py-3">Adeudo</th>
+                                <th scope="col" class="px-6 py-3 text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($overdueInstallments as $installment)
+                                @php
+                                    $totalDue = $installment->base_amount + $installment->interest_amount;
+                                    $totalPaid = $installment->transactions->sum('pivot.amount_applied');
+                                    $remaining = $totalDue - $totalPaid;
+                                @endphp
+                                @if($remaining > 0.005)
+                                    <tr class="bg-white border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-gray-900">
+                                            {{ $installment->paymentPlan->lot->client->name ?? 'N/A' }}
+                                        </td>
+                                        <td class="px-6 py-4 text-gray-600">
+                                            {{ $installment->paymentPlan->lot->identifier ?? 'N/A' }}
+                                        </td>
+                                        <td class="px-6 py-4 text-gray-600">
+                                            {{ $installment->installment_number }}
+                                        </td>
+                                        <td class="px-6 py-4 font-medium text-red-600">
+                                            {{ $installment->due_date->format('d/m/Y') }}
+                                        </td>
+                                        <td class="px-6 py-4 font-bold text-gray-800">
+                                            ${{ number_format($remaining, 2) }}
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            {{-- MODIFICAR ESTA SECCIÓN --}}
+                                            <div class="flex items-center justify-end gap-4">
+                                                <a href="{{ generate_whatsapp_message($installment, $remaining) }}" target="_blank" class="font-medium text-green-600 dark:text-green-500 hover:underline">
+                                                    Notificar
+                                                </a>
+                                                <a href="{{ route('transactions.create', ['client_id' => $installment->paymentPlan->lot->client_id, 'installment_id' => $installment->id]) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
+                                                    Pagar
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endif
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                        <p>No hay cuotas vencidas.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
-        @endif
     </div>
 </x-app-layout>

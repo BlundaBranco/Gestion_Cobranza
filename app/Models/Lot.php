@@ -9,7 +9,7 @@ class Lot extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['client_id', 'identifier', 'total_price', 'status'];
+    protected $fillable = ['client_id', 'block_number', 'lot_number', 'identifier', 'total_price', 'status'];
 
     public function client()
     {
@@ -19,6 +19,15 @@ class Lot extends Model
     public function paymentPlans()
     {
         return $this->hasMany(PaymentPlan::class);
+    }
+    
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($lot) {
+            $lot->identifier = "Manzana " . $lot->block_number . ", Lote " . $lot->lot_number;
+        });
     }
 
     public function ownershipHistory()

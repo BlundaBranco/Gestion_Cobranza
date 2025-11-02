@@ -17,3 +17,28 @@ if (!function_exists('number_to_words_es')) {
         return ucfirst($words) . ' pesos ' . $formattedDecimal . '/100 M.N.';
     }
 }
+
+if (!function_exists('generate_whatsapp_message')) {
+    function generate_whatsapp_message(\App\Models\Installment $installment, float $remaining): string
+    {
+        $clientName = $installment->paymentPlan->lot->client->name;
+        $lotIdentifier = $installment->paymentPlan->lot->identifier;
+        $installmentNumber = $installment->installment_number;
+        $dueDate = $installment->due_date->format('d/m/Y');
+        $remainingFormatted = number_format($remaining, 2);
+
+        $message = "Hola {$clientName}, le recordamos que la cuota #{$installmentNumber} del lote {$lotIdentifier}, con vencimiento el {$dueDate}, tiene un adeudo pendiente de \${$remainingFormatted}.";
+
+        // Obtener el número de teléfono del cliente y limpiarlo
+        $phone = $installment->paymentPlan->lot->client->phone;
+        // Eliminar caracteres no numéricos
+        $phoneNumber = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Asumir código de país de México (52) si no está presente
+        if (strlen($phoneNumber) == 10) {
+            $phoneNumber = '52' . $phoneNumber;
+        }
+
+        return 'https://wa.me/' . $phoneNumber . '?text=' . urlencode($message);
+    }
+}

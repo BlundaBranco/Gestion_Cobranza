@@ -12,11 +12,11 @@
 
     <div class="mt-4">
         <x-input-label for="description" :value="__('Descripción')" />
-        <textarea id="description" name="description" class="block mt-1 w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">{{ old('description', $service->description) }}</textarea>
+        <textarea id="description" name="description" class="block mt-1 w-full border-2 border-gray-300 text-gray-900 rounded-xl shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-150" rows="4">{{ old('description', $service->description) }}</textarea>
         <x-input-error :messages="$errors->get('description')" class="mt-2" />
     </div>
 
-    <div class="flex items-center justify-end mt-4">
+    <div class="flex items-center justify-end mt-6">
         <x-primary-button>
             {{ $buttonText }}
         </x-primary-button>

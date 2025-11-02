@@ -9,18 +9,18 @@ class ClientController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Client::query();
+        $query = Client::query()->withCount('lots'); // withCount es eficiente
 
-        if ($request->has('search')) {
-            $searchTerm = $request->search;
+        if ($request->filled('search')) {
+            $searchTerm = '%' . $request->search . '%';
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('email', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('phone', 'like', '%' . $searchTerm . '%');
+                $q->where('name', 'like', $searchTerm)
+                ->orWhere('email', 'like', $searchTerm)
+                ->orWhere('phone', 'like', $searchTerm);
             });
         }
 
-        $clients = $query->latest()->paginate(10);
+        $clients = $query->latest()->paginate(10)->withQueryString();
 
         return view('clients.index', compact('clients'));
     }
@@ -47,41 +47,43 @@ class ClientController extends Controller
 
     public function show(Client $client)
     {
-        // OPTIMIZACIÓN: Carga eficiente con select específicos y agregaciones
+        // Cargar relaciones necesarias
         $client->load([
-            'lots' => function ($query) {
-                $query->with([
-                    'paymentPlans' => function ($q) {
-                        $q->with(['service:id,name'])
-                          ->withCount('installments');
-                    },
-                    'paymentPlans.installments' => function ($q) {
-                        $q->with('transactions:id')
-                          ->select('id', 'payment_plan_id', 'installment_number', 'due_date', 
-                                   'base_amount', 'interest_amount', 'status')
-                          ->orderBy('installment_number');
-                    }
-                ]);
-            }
+            'lots.paymentPlans.service', 
+            'lots.paymentPlans.installments.transactions',
+            'transactions'
         ]);
 
-        // Precalcular totales para evitar cálculos en la vista
+        $totalDebt = 0;
+        $totalPaid = 0;
+        $pendingInstallmentsCount = 0;
+
         foreach ($client->lots as $lot) {
             foreach ($lot->paymentPlans as $plan) {
                 foreach ($plan->installments as $installment) {
-                    $totalOwed = $installment->base_amount + $installment->interest_amount;
-                    $totalPaid = $installment->transactions->sum('pivot.amount_applied');
-                    
-                    // Añadir propiedades calculadas
-                    $installment->total_owed = $totalOwed;
-                    $installment->total_paid = $totalPaid;
-                    $installment->remaining_balance = max(0, $totalOwed - $totalPaid);
-                    $installment->is_paid = $installment->remaining_balance <= 0.005;
+                    $totalDueForInstallment = $installment->base_amount + $installment->interest_amount;
+                    $paidForInstallment = $installment->transactions->sum('pivot.amount_applied');
+                    $remaining = $totalDueForInstallment - $paidForInstallment;
+
+                    if ($remaining > 0.005) {
+                        $totalDebt += $remaining;
+                        $pendingInstallmentsCount++;
+                    }
+                    $totalPaid += $paidForInstallment;
                 }
             }
         }
 
-        return view('clients.show', compact('client'));
+        $stats = [
+            'servicesCount' => $client->lots->count(),
+            'totalDebt' => $totalDebt,
+            'totalPaid' => $totalPaid,
+            'pendingInstallmentsCount' => $pendingInstallmentsCount,
+        ];
+
+        $recentTransactions = $client->transactions()->latest()->take(5)->get();
+
+        return view('clients.show', compact('client', 'stats', 'recentTransactions'));
     }
 
     public function edit(Client $client)

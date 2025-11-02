@@ -27,12 +27,13 @@
 </head>
 <body>
     @php
-        // Lógica para separar Manzana y Lote del identificador. Asume formato "Manzana X, Lote Y"
-        $identifierParts = explode(',', $transaction->installments->first()->paymentPlan->lot->identifier ?? ' , ');
-        $manzana = trim(str_ireplace('Manzana', '', $identifierParts[0] ?? 'N/A'));
-        $lote = trim(str_ireplace('Lote', '', $identifierParts[1] ?? 'N/A'));
-        $pagoNum = $transaction->installments->first()->installment_number ?? 'N/A';
-        $pagoTotal = $transaction->installments->first()->paymentPlan->number_of_installments ?? 'N/A';
+        $firstInstallment = $transaction->installments->first();
+        $lot = $firstInstallment->paymentPlan->lot ?? null;
+        
+        $manzana = $lot->block_number ?? 'N/A';
+        $lote = $lot->lot_number ?? 'N/A';
+        $pagoNum = $firstInstallment->installment_number ?? 'N/A';
+        $pagoTotal = $firstInstallment->paymentPlan->number_of_installments ?? 'N/A';
     @endphp
     <div class="receipt-box">
         <div class="header">
@@ -94,8 +95,8 @@
         <div class="footer-section">
             <div class="footer-col">
                 <div class="signature-box">
-                    Recibió: {{-- El esquema actual no liga la transacción a un usuario. Se usa un placeholder. --}}
-                    <span class="content">{{ config('app.name') }}</span>
+                    Recibió:
+                    <span class="content">{{ $transaction->user->name ?? config('app.name') }}</span>
                     <div class="signature-line">
                         Firma
                     </div>

@@ -19,5 +19,8 @@
         "postcss": "^8.5.6",
         "tailwindcss": "^3.4.1",
         "vite": "^7.0.4"
+    },
+    "dependencies": {
+        "@fortawesome/fontawesome-free": "^7.1.0"
     }
 }

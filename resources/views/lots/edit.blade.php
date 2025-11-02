@@ -1,192 +1,97 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Editar Lote: ') . $lot->identifier }}
-        </h2>
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Gestionar Lote: {{ $lot->identifier }}</h2>
+                <p class="text-sm text-gray-600">Administra información y planes de pago</p>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            {{-- Formulario de Edición del Lote --}}
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Información del Lote</h3>
-                    @include('lots._form', ['action' => route('lots.update', $lot), 'method' => 'PUT', 'buttonText' => 'Actualizar Lote'])
-                </div>
-            </div>
-
-            {{-- Sección de Planes de Pago --}}
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="max-w-full">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Planes de Pago</h3>
-                    
-                    {{-- Formulario para crear nuevo plan --}}
-                    <div class="mb-6 border-b pb-6">
-                        <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-2">Crear Nuevo Plan de Pago</h4>
-                        <form method="POST" action="{{ route('lots.payment-plans.store', $lot) }}">
-                            @csrf
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div>
-                                    <x-input-label for="service_id" value="Servicio" />
-                                    <select name="service_id" id="service_id" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
-                                        @foreach(\App\Models\Service::all() as $service)
-                                            <option value="{{ $service->id }}">{{ $service->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <x-input-error :messages="$errors->get('service_id')" class="mt-2" />
-                                </div>
-                                <div>
-                                    <x-input-label for="total_amount" value="Monto Total" />
-                                    <x-text-input id="total_amount" name="total_amount" type="number" step="0.01" class="mt-1 block w-full" :value="old('total_amount')" />
-                                    <x-input-error :messages="$errors->get('total_amount')" class="mt-2" />
-                                </div>
-                                <div>
-                                    <x-input-label for="number_of_installments" value="No. de Cuotas" />
-                                    <x-text-input id="number_of_installments" name="number_of_installments" type="number" class="mt-1 block w-full" :value="old('number_of_installments')" />
-                                    <x-input-error :messages="$errors->get('number_of_installments')" class="mt-2" />
-                                </div>
-                                <div>
-                                    <x-input-label for="start_date" value="Fecha de Inicio" />
-                                    <x-text-input id="start_date" name="start_date" type="date" class="mt-1 block w-full" :value="old('start_date')" />
-                                    <x-input-error :messages="$errors->get('start_date')" class="mt-2" />
-                                </div>
+            
+            <!-- Formulario de Edición del Lote -->
+            <div class="bg-white rounded-xl shadow-md border-2 border-gray-200">
+                <form method="POST" action="{{ route('lots.update', $lot) }}">
+                    @csrf
+                    @method('PUT')
+                    <div class="p-6 md:p-8 space-y-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-2 bg-blue-100 rounded-lg">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
                             </div>
-                            <div class="flex justify-end mt-4">
-                                <x-primary-button>Crear Plan</x-primary-button>
+                            <h3 class="text-lg font-bold text-gray-900">Información del Lote</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t-2 border-gray-100 pt-6">
+                            <div>
+                                <x-input-label for="identifier" value="Identificador" />
+                                <x-text-input id="identifier" name="identifier" class="mt-1 block w-full" :value="old('identifier', $lot->identifier)" required />
                             </div>
-                        </form>
+                            <div>
+                                <x-input-label for="status" value="Estado" />
+                                <select id="status" name="status" class="mt-1 block w-full border-2 border-gray-300 rounded-xl shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-150">
+                                    <option value="disponible" @selected(old('status', $lot->status) == 'disponible')>Disponible</option>
+                                    <option value="vendido" @selected(old('status', $lot->status) == 'vendido')>Vendido</option>
+                                    <option value="liquidado" @selected(old('status', $lot->status) == 'liquidado')>Liquidado</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <x-input-label value="Cliente Asignado" />
+                                <div class="mt-1 flex items-center gap-3 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                                    <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                                        <span class="text-white font-bold text-sm">
+                                            {{ $lot->client ? substr($lot->client->name, 0, 2) : 'SA' }}
+                                        </span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-semibold text-gray-900">{{ $lot->client->name ?? 'Sin asignar' }}</p>
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-sm text-gray-600 flex items-start gap-2">
+                                    <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span>Para cambiar el propietario, utiliza la sección "Transferir Lote" más abajo.</span>
+                                </p>
+                                <input type="hidden" name="client_id" value="{{ $lot->client_id }}">
+                                <input type="hidden" name="total_price" value="{{ $lot->total_price }}">
+                            </div>
+                        </div>
                     </div>
-
-                    {{-- Lista de planes existentes --}}
-                    @forelse ($lot->paymentPlans()->with('service', 'installments.transactions')->get() as $plan)
-                        <div class="mb-4">
-                            <h4 class="font-semibold">{{ $plan->service->name }} - ${{ number_format($plan->total_amount, 2) }} ({{ $plan->number_of_installments }} cuotas)</h4>
-                            <div class="overflow-x-auto mt-2">
-                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead>
-                                        <tr>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">#</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Vencimiento</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Monto Base</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Intereses</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Estado</th>
-                                            <th class="relative px-2 py-2"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        @foreach ($plan->installments as $installment)
-                                            <tr>
-                                                @php
-                                                    $totalPaid = $installment->transactions->sum('pivot.amount_applied');
-                                                    $totalDue = $installment->base_amount + $installment->interest_amount;
-                                                    $remaining = $totalDue - $totalPaid;
-                                                @endphp
-                                                <td class="px-2 py-2">{{ $installment->installment_number }}</td>
-                                                <td class="px-2 py-2">{{ $installment->due_date->format('d/m/Y') }}</td>
-                                                <td class="px-2 py-2">${{ number_format($installment->base_amount, 2) }}</td>
-                                                <td class="px-2 py-2">${{ number_format($installment->interest_amount, 2) }}</td>
-                                                <td class="px-2 py-2">
-                                                    ${{ number_format($totalDue, 2) }} 
-                                                    @if($remaining > 0.005 && $remaining < $totalDue)
-                                                        <span class="text-sm text-red-500">(Adeudo: ${{ number_format($remaining, 2) }})</span>
-                                                    @endif
-                                                </td>
-                                                <td class="px-2 py-2">
-                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                        @switch($installment->status)
-                                                            @case('pagada') bg-green-100 text-green-800 @break
-                                                            @case('vencida') bg-red-100 text-red-800 @break
-                                                            @default bg-yellow-100 text-yellow-800
-                                                        @endswitch">
-                                                        {{ ucfirst($installment->status) }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-2 py-2 text-right">
-                                                    @if ($installment->interest_amount > 0)
-                                                        <form action="{{ route('installments.condone', $installment) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas condonar los intereses de esta cuota?');">
-                                                            @csrf
-                                                            <button type="submit" class="text-xs text-blue-600 hover:text-blue-900">Condonar</button>
-                                                        </form>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    @empty
-                        <p>No hay planes de pago para este lote.</p>
-                    @endforelse
-                </div>
+                    <div class="flex items-center justify-end gap-4 bg-gradient-to-br from-gray-50 to-blue-50 px-6 py-4 border-t-2 border-gray-100">
+                        <x-primary-button>
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Guardar Cambios
+                        </x-primary-button>
+                    </div>
+                </form>
             </div>
 
-            {{-- Sección de Transferencia de Lote --}}
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Transferir Lote</h3>
-                    <form method="POST" action="{{ route('lots.transfer', $lot) }}">
-                        @csrf
-                        <div>
-                            <x-input-label for="new_client_id" value="Nuevo Propietario" />
-                            <select name="new_client_id" id="new_client_id" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 rounded-md shadow-sm">
-                                @foreach($clients->where('id', '!=', $lot->client_id) as $client)
-                                    <option value="{{ $client->id }}">{{ $client->name }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('new_client_id')" class="mt-2" />
-                        </div>
-                        <div class="mt-4">
-                            <x-input-label for="transfer_date" value="Fecha de Transferencia" />
-                            <x-text-input id="transfer_date" name="transfer_date" type="date" class="mt-1 block w-full" :value="date('Y-m-d')" />
-                            <x-input-error :messages="$errors->get('transfer_date')" class="mt-2" />
-                        </div>
-                        <div class="mt-4">
-                            <x-input-label for="notes" value="Notas (Opcional)" />
-                            <textarea id="notes" name="notes" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 rounded-md shadow-sm"></textarea>
-                        </div>
-                        <div class="flex justify-end mt-4">
-                            <x-primary-button>Transferir</x-primary-button>
-                        </div>
-                    </form>
-                </div>
+            <!-- Planes de Pago -->
+            <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 p-6 md:p-8">
+                @include('lots._payment-plans-section')
+            </div>
+
+            <!-- Transferencia de Lote -->
+            <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 p-6 md:p-8">
+                @include('lots._transfer-section')
+            </div>
+
+            <!-- Historial de Propietarios -->
+            <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 p-6 md:p-8">
+                @include('lots._history-section')
             </div>
         </div>
     </div>
-
-    {{-- Sección Historial de Propietarios --}}
-    <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg mt-6">
-        <div class="max-w-full">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Historial de Propietarios</h3>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Transferencia</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propietario Anterior</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nuevo Propietario</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notas</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-700">
-                        @forelse ($lot->ownershipHistory as $history)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap">{{ \Illuminate\Support\Carbon::parse($history->transfer_date)->format('d/m/Y') }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">{{ $history->previousClient->name ?? 'Sin propietario anterior' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">{{ $history->newClient->name ?? 'N/A' }}</td>
-                                <td class="px-6 py-4">{{ $history->notes }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="px-6 py-4 text-center">No hay historial de transferencias para este lote.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-
 </x-app-layout>

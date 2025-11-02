@@ -44,7 +44,7 @@ class PaymentPlanController extends Controller
         }
     }
     
-    protected function generateInstallments(PaymentPlan $paymentPlan)
+    public function generateInstallments(PaymentPlan $paymentPlan)
     {
         $installments = [];
         $baseAmount = round($paymentPlan->total_amount / $paymentPlan->number_of_installments, 2);

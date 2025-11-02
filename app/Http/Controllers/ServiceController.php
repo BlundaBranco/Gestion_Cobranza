@@ -47,8 +47,15 @@ class ServiceController extends Controller
 
     public function destroy(Service $service)
     {
-        // Añadir lógica para prevenir borrado si está en uso por un plan de pago
+        // Carga de forma eficiente la cuenta de planes de pago asociados.
+        $service->loadCount('paymentPlans');
+
+        if ($service->payment_plans_count > 0) {
+            return back()->with('error', 'No se puede eliminar el servicio porque está en uso por ' . $service->payment_plans_count . ' plan(es) de pago.');
+        }
+
         $service->delete();
         return redirect()->route('services.index')->with('success', 'Servicio eliminado exitosamente.');
     }
+    
 }
