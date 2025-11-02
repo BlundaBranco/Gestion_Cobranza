@@ -11,47 +11,45 @@
                 <th class="px-4 py-3 text-right font-bold">Acciones</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
+        <tbody class="divide-y dark:divide-gray-700">
             @foreach ($plan->installments->sortBy('installment_number') as $installment)
                 @php
                     $totalPaid = $installment->transactions->sum('pivot.amount_applied');
                     $totalDue = $installment->base_amount + $installment->interest_amount;
                     $remaining = $totalDue - $totalPaid;
                 @endphp
-                <tr class="hover:bg-gray-50 transition-colors duration-150">
-                    <td class="px-4 py-3 font-semibold text-gray-900">{{ $installment->installment_number }}</td>
-                    <td class="px-4 py-3 text-gray-700 {{ $installment->status == 'vencida' && $remaining > 0.005 ? 'font-bold text-red-600' : '' }}">
-                        {{ $installment->due_date->format('d/m/Y') }}
-                    </td>
-                    <td class="px-4 py-3 text-gray-900 font-semibold">${{ number_format($installment->base_amount, 2) }}</td>
-                    <td class="px-4 py-3 text-yellow-700 font-semibold">${{ number_format($installment->interest_amount, 2) }}</td>
-                    <td class="px-4 py-3">
-                        <span class="font-bold text-gray-900">${{ number_format($totalDue, 2) }}</span>
+                <tr class="dark:hover:bg-gray-700">
+                    <td class="px-2 py-2">{{ $installment->installment_number }}</td>
+                    <td class="px-2 py-2">{{ $installment->due_date->format('d/m/Y') }}</td>
+                    <td class="px-2 py-2">${{ number_format($installment->base_amount, 2) }}</td>
+                    <td class="px-2 py-2 text-yellow-400">${{ number_format($installment->interest_amount, 2) }}</td>
+                    <td class="px-2 py-2">
+                        ${{ number_format($totalDue, 2) }} 
                         @if($remaining > 0.005 && $remaining < $totalDue)
-                            <span class="block text-xs text-red-600 font-semibold mt-1">(Adeudo: ${{ number_format($remaining, 2) }})</span>
+                            <span class="text-xs text-red-500">(Adeudo: ${{ number_format($remaining, 2) }})</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-2 py-2">
                         @php
-                            $statusClass = $remaining <= 0.005 ? 'bg-green-100 text-green-800 border-2 border-green-200' : ($installment->status == 'vencida' ? 'bg-red-100 text-red-800 border-2 border-red-200' : 'bg-yellow-100 text-yellow-800 border-2 border-yellow-200');
+                            $statusClass = $remaining <= 0.005 ? 'bg-green-900 text-green-300' : ($installment->status == 'vencida' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300');
                         @endphp
-                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
                             {{ $remaining <= 0.005 ? 'Pagada' : ucfirst($installment->status) }}
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-right">
-                        <div class="flex items-center justify-end gap-2">
-                            @if ($installment->interest_amount > 0)
-                                <form action="{{ route('installments.condone', $installment) }}" method="POST" class="inline-block" onsubmit="return confirm('¿Seguro que deseas condonar los intereses?');">
-                                    @csrf
-                                    <button type="submit" class="text-xs text-yellow-700 hover:underline">Condonar</button>
-                                </form>
-                            @endif
-                            @if($remaining > 0.005)
-                                <a href="{{ generate_whatsapp_message($installment, $remaining) }}" target="_blank" class="text-xs text-green-700 hover:underline">Notificar</a>
-                                <a href="{{ route('transactions.create', ['client_id' => $lot->client_id, 'installment_id' => $installment->id]) }}" class="text-xs text-blue-700 hover:underline">Pagar</a>
-                            @endif
-                        </div>
+                    <td class="px-2 py-2 text-right space-x-4">
+                        @if ($installment->interest_amount > 0)
+                            <form action="{{ route('installments.condone', $installment) }}" method="POST" class="inline-block" onsubmit="return confirm('¿Seguro?');">
+                                @csrf
+                                <button type="submit" class="text-xs text-blue-400 hover:underline">Condonar</button>
+                            </form>
+                        @endif
+                        @if($remaining > 0.005 && $lot->client && $lot->client->phone)
+                            <a href="{{ generate_whatsapp_message($installment, $remaining) }}" target="_blank" class="text-xs text-green-400 hover:underline">Notificar</a>
+                        @endif
+                        @if($remaining > 0.005)
+                            <a href="{{ route('transactions.create', ['client_id' => $lot->client_id, 'installment_id' => $installment->id]) }}" class="text-xs text-blue-400 hover:underline">Pagar</a>
+                        @endif
                     </td>
                 </tr>
             @endforeach

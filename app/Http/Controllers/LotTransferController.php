@@ -34,8 +34,12 @@ class LotTransferController extends Controller
                 'notes' => $validated['notes'],
             ]);
 
-            // 2. Actualizar el propietario actual del lote
-            $lot->update(['client_id' => $validated['new_client_id']]);
+            // 2. Actualizar el propietario y el estado
+            $updateData = ['client_id' => $validated['new_client_id']];
+            if ($lot->status === 'disponible') {
+                $updateData['status'] = 'vendido';
+            }
+            $lot->update($updateData);
 
             DB::commit();
 

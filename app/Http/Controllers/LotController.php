@@ -12,14 +12,19 @@ class LotController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Lot::with('client');
+        $query = Lot::with(['client', 'owner']);
 
         if ($request->filled('search')) {
             $searchTerm = '%' . $request->search . '%';
-            $query->where('identifier', 'like', $searchTerm)
-                ->orWhereHas('client', function ($q) use ($searchTerm) {
-                    $q->where('name', 'like', $searchTerm);
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('identifier', 'like', $searchTerm)
+                ->orWhereHas('client', function ($subQ) use ($searchTerm) {
+                    $subQ->where('name', 'like', $searchTerm);
+                })
+                ->orWhereHas('owner', function ($subQ) use ($searchTerm) { // <-- LÓGICA AÑADIDA
+                    $subQ->where('name', 'like', $searchTerm);
                 });
+            });
         }
         
         $lots = $query->latest()->paginate(9)->withQueryString();
@@ -49,14 +54,16 @@ class LotController extends Controller
     public function create()
     {
         $clients = Client::orderBy('name')->get();
-        return view('lots.create', compact('clients'));
+        $owners = \App\Models\Owner::orderBy('name')->get();
+        return view('lots.create', compact('clients', 'owners')); 
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'block_number' => 'required|string|max:255', // Nueva validación
-            'lot_number' => 'required|string|max:255',   // Nueva validación
+            'owner_id' => 'required|exists:owners,id',
+            'block_number' => 'required|string|max:255',
+            'lot_number' => 'required|string|max:255',
             'client_id' => 'nullable|exists:clients,id',
             'service_id' => 'required|exists:services,id',
             'total_amount' => 'required|numeric|min:0',
@@ -64,20 +71,23 @@ class LotController extends Controller
             'start_date' => 'required|date',
         ]);
 
-        // Validar unicidad combinada
-        $exists = Lot::where('block_number', $validated['block_number'])
+        // Validar unicidad combinada de manzana y lote para el mismo socio
+        $exists = Lot::where('owner_id', $validated['owner_id'])
+                    ->where('block_number', $validated['block_number'])
                     ->where('lot_number', $validated['lot_number'])
                     ->exists();
+
         if ($exists) {
-            return back()->withErrors(['lot_number' => 'Este número de lote ya existe para la manzana especificada.'])->withInput();
+            return back()->withErrors(['lot_number' => 'Este número de lote ya existe para la manzana y socio especificados.'])->withInput();
         }
         
         try {
             DB::beginTransaction();
 
             $lot = Lot::create([
-                'block_number' => $validated['block_number'], // Nuevo campo
-                'lot_number' => $validated['lot_number'],     // Nuevo campo
+                'owner_id' => $validated['owner_id'],
+                'block_number' => $validated['block_number'],
+                'lot_number' => $validated['lot_number'],
                 'client_id' => $validated['client_id'],
                 'total_price' => $validated['total_amount'],
                 'status' => $validated['client_id'] ? 'vendido' : 'disponible',
@@ -115,10 +125,29 @@ class LotController extends Controller
         $validated = $request->validate([
             'identifier' => 'required|string|max:255|unique:lots,identifier,' . $lot->id,
             'status' => 'required|in:disponible,vendido,liquidado',
-            // Los campos 'client_id' y 'total_price' se envían ocultos y no necesitan validación estricta aquí
+            'owner_id' => 'sometimes|nullable|exists:owners,id',
         ]);
 
-        $lot->update($validated);
+        $lot->identifier = $validated['identifier'];
+        $lot->status = $validated['status'];
+
+        if ($request->has('owner_id')) {
+            $lot->owner_id = $validated['owner_id'];
+        }
+
+        // --- LÓGICA AÑADIDA ---
+        // Si el lote estaba disponible y ahora tiene un cliente, marcarlo como vendido.
+        // (Asumimos que el client_id viene del input oculto si ya existía).
+        if ($lot->isDirty('client_id') && $request->input('client_id') && $lot->getOriginal('status') === 'disponible') {
+            $lot->status = 'vendido';
+        }
+        // Lógica similar para la transferencia
+        if ($lot->isDirty('client_id') && $request->input('client_id') && $lot->status === 'disponible') {
+            $lot->status = 'vendido';
+        }
+        // --- FIN LÓGICA AÑADIDA ---
+
+        $lot->save();
 
         return redirect()->route('lots.edit', $lot)->with('success', 'Lote actualizado exitosamente.');
     }

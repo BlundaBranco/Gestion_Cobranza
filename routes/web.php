@@ -13,6 +13,7 @@ use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OwnerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +65,9 @@ Route::middleware('auth')->group(function () {
 
     // Reportes 
     Route::get('reports/income', [ReportController::class, 'incomeReport'])->name('reports.income');
+
+    // Propietarios
+    Route::resource('owners', OwnerController::class);
 });
 
 require __DIR__.'/auth.php';

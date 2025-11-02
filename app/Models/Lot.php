@@ -30,9 +30,15 @@ class Lot extends Model
         });
     }
 
+    public function owner()
+    {
+        return $this->belongsTo(Owner::class);
+    }
+
     public function ownershipHistory()
     {
         return $this->hasMany(LotOwnershipHistory::class)->latest();
     }
+
 
 }

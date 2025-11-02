@@ -19,23 +19,28 @@
             <!-- Filtros -->
             <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 p-6">
                 <form method="GET" action="{{ route('reports.income') }}">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div>
-                            <x-input-label for="start_date" value="Fecha de Inicio" />
-                            <x-text-input id="start_date" name="start_date" type="date" class="mt-1 block w-full" :value="$startDate" />
-                        </div>
-                        <div>
-                            <x-input-label for="end_date" value="Fecha de Fin" />
-                            <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full" :value="$endDate" />
-                        </div>
-                        <div>
-                            <x-primary-button class="w-full justify-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                                </svg>
-                                Filtrar
-                            </x-primary-button>
-                        </div>
+                    <div>
+                        <x-input-label for="start_date" value="Fecha de Inicio" />
+                        <x-text-input id="start_date" name="start_date" type="date" class="mt-1 block w-full" :value="$startDate" />
+                    </div>
+                    <div>
+                        <x-input-label for="end_date" value="Fecha de Fin" />
+                        <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full" :value="$endDate" />
+                    </div>
+                    {{-- NUEVO FILTRO --}}
+                    <div>
+                        <x-input-label for="owner_id" value="Socio" />
+                        <select id="owner_id" name="owner_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <option value="">Todos los Socios</option>
+                            @foreach($owners as $owner)
+                                <option value="{{ $owner->id }}" @selected(request('owner_id') == $owner->id)>
+                                    {{ $owner->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <x-primary-button class="w-full justify-center">Filtrar</x-primary-button>
                     </div>
                 </form>
             </div>

@@ -29,13 +29,16 @@
                     <x-nav-link :href="route('lots.index')" :active="request()->routeIs('lots.*')">
                         {{ __('Lotes') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('owners.index')" :active="request()->routeIs('owners.*')">
+                        {{ __('Socios') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('services.index')" :active="request()->routeIs('services.*')">
                         {{ __('Servicios') }}
                     </x-nav-link>
                     <x-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
                         {{ __('Transacciones') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('reports.income')" :active="request()->routeIs('reports.income')">
+                    <x-nav-link :href="route('reports.income')" :active="request()->routeIs('reports.*')">
                         {{ __('Reportes') }}
                     </x-nav-link>
                 </div>
@@ -87,19 +90,22 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-             <x-responsive-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
+            <x-responsive-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
                 {{ __('Clientes') }}
             </x-responsive-nav-link>
-             <x-responsive-nav-link :href="route('lots.index')" :active="request()->routeIs('lots.*')">
+            <x-responsive-nav-link :href="route('lots.index')" :active="request()->routeIs('lots.*')">
                 {{ __('Lotes') }}
             </x-responsive-nav-link>
-             <x-responsive-nav-link :href="route('services.index')" :active="request()->routeIs('services.*')">
+            <x-responsive-nav-link :href="route('owners.index')" :active="request()->routeIs('owners.*')">
+                {{ __('Socios') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('services.index')" :active="request()->routeIs('services.*')">
                 {{ __('Servicios') }}
             </x-responsive-nav-link>
-             <x-responsive-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
+            <x-responsive-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
                 {{ __('Transacciones') }}
             </x-responsive-nav-link>
-             <x-responsive-nav-link :href="route('reports.income')" :active="request()->routeIs('reports.income')">
+            <x-responsive-nav-link :href="route('reports.income')" :active="request()->routeIs('reports.*')">
                 {{ __('Reportes') }}
             </x-responsive-nav-link>
         </div>
