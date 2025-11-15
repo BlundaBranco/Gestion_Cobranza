@@ -103,7 +103,7 @@
                                         </thead>
                                         <tbody class="divide-y divide-gray-100">
                                             <template x-for="inst in filteredInstallments" :key="inst.id">
-                                                <tr class="hover:bg-indigo-50 transition-colors duration-150 cursor-pointer">
+                                                <tr class="hover:bg-indigo-50 transition-colors duration-150 cursor-pointer" @click="$el.querySelector('input[type=checkbox]').click()">
                                                     <td class="p-4 text-center">
                                                         <input type="checkbox" name="installments[]" :value="inst.id" x-model="selectedInstallments" @change="updateTotal()" class="w-5 h-5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-all duration-200">
                                                     </td>

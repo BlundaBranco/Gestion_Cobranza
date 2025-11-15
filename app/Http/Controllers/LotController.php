@@ -19,7 +19,7 @@ class LotController extends Controller
 
             // Lógica mejorada para buscar por Manzana y Lote
             // Busca patrones como "manzana 10 lote 5", "m 10 l 5", "10 5"
-            if (preg_match('/^(?:manzana|mz|m)\s*(\d+)\s*(?:lote|l)?\s*(\d+)?$/i', $search, $matches)) {
+            if (preg_match('/^(?:manzana|mz|m)\s*(\d+),?\s*(?:lote|l)?\s*(\d+)?$/i', $search, $matches)) {
                 $block = $matches[1];
                 $lot = $matches[2] ?? null;
 
