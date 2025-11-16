@@ -24,9 +24,8 @@ if (!function_exists('generate_whatsapp_message')) {
         $lot = $installment->paymentPlan->lot;
         $client = $lot->client;
 
-        // Si no hay cliente, no se puede enviar mensaje. Devolver un enlace inofensivo.
         if (!$client || !$client->phone) {
-            return '#';
+            return '#'; // Devuelve un enlace inofensivo si no hay cliente o teléfono
         }
 
         $clientName = $client->name;
@@ -35,10 +34,21 @@ if (!function_exists('generate_whatsapp_message')) {
         $dueDate = $installment->due_date->format('d/m/Y');
         $remainingFormatted = number_format($remaining, 2);
 
-        $message = "Hola {$clientName}, le recordamos que la cuota #{$installmentNumber} del lote {$lotIdentifier}, con vencimiento el {$dueDate}, tiene un adeudo pendiente de \${$remainingFormatted}.";
+        // Lógica condicional para el estado
+        $statusMessage = '';
+        if ($installment->status === 'vencida') {
+            $statusMessage = "se encuentra VENCIDA";
+        } else { // 'pendiente'
+            $statusMessage = "está PENDIENTE de pago";
+        }
+
+        // Mensaje simplificado para máxima compatibilidad
+        $message = "Hola {$clientName}, le recordamos que la cuota nro {$installmentNumber} del lote {$lotIdentifier}, con vencimiento el {$dueDate}, {$statusMessage} con un adeudo de {$remainingFormatted} pesos.";
         
+        // Limpieza y formato del número de teléfono
         $phoneNumber = preg_replace('/[^0-9]/', '', $client->phone);
         
+        // Añadir código de país de México si es necesario
         if (strlen($phoneNumber) == 10) {
             $phoneNumber = '52' . $phoneNumber;
         }

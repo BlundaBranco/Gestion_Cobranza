@@ -154,4 +154,18 @@
             </div>
         </div>
     </div>
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        // Inicializa todos los selectores con la clase 'select2' en esta página
+        $('.select2').select2({
+            theme: "classic",
+            placeholder: "Selecciona o busca un cliente",
+            allowClear: true
+        });
+    });
+</script>
+@endpush
+
 </x-app-layout>

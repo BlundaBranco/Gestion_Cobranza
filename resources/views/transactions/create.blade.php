@@ -31,10 +31,10 @@
                             <div class="w-full">
                                 <x-input-label for="client_id" value="Cliente" class="text-sm font-semibold text-gray-700" />
                                 <div class="mt-2">
-                                    <select x-model="clientId" @change="fetchInstallments()" id="client_id" name="client_id" class="select2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200" required>
+                                    <select x-model="clientId" @input="fetchInstallments()" id="client_id" name="client_id" class="select2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200" required>
                                         <option value="">Seleccione o busque un cliente</option>
                                         @foreach($clients as $client)
-                                            <option value="{{ $client->id }}" @selected($selectedClientId == $client->id)>{{ $client->name }}</option>
+                                            <option value="{{ $client->id }}" @selected(old('client_id', $selectedClientId ?? '') == $client->id)>{{ $client->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -164,35 +164,36 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('paymentForm', () => ({
-                // Propiedades de datos de Alpine
-                clientId: '{{ $selectedClientId ?? '' }}', 
+                clientId: '{{ old('client_id', $selectedClientId ?? '') }}', // Mantiene el valor después de errores de validación
                 amountPaid: 0,
                 installments: [],
                 selectedInstallments: [],
                 loading: false,
                 searchQuery: '',
 
-                // Método de inicialización
                 init() {
-                    const self = this; // Guardar referencia a 'this' de Alpine
+                    const self = this;
                     
-                    // Inicializar Select2
                     $('#client_id').select2({
-                        theme: "classic"
+                        theme: "classic",
+                        placeholder: "Selecciona o busca un cliente",
+                        allowClear: true
                     }).on('change', function () {
-                        // Cuando Select2 cambia, actualizar el modelo de Alpine
+                        // Actualizar el modelo de Alpine cuando Select2 cambia
                         self.clientId = $(this).val();
-                        // Y luego llamar a la función para cargar las cuotas
                         self.fetchInstallments();
                     });
 
-                    // Si hay un cliente preseleccionado desde la URL, cargar sus cuotas
+                    // Establecer el valor inicial de Select2 si existe
                     if (this.clientId) {
+                        $('#client_id').val(this.clientId).trigger('change.select2');
                         this.fetchInstallments();
+                    } else {
+                        // Si no hay cliente seleccionado, asegurarse de limpiar la lista de cuotas
+                        this.installments = [];
                     }
                 },
 
-                // Método para cargar las cuotas desde la API
                 fetchInstallments() {
                     if (!this.clientId) {
                         this.installments = [];
@@ -201,6 +202,8 @@
                     }
                     this.loading = true;
                     this.selectedInstallments = [];
+                    this.searchQuery = ''; // Limpiar búsqueda al cambiar de cliente
+                    
                     fetch(`/clients/${this.clientId}/pending-installments`)
                         .then(response => response.json())
                         .then(data => {
@@ -216,7 +219,6 @@
                         });
                 },
 
-                // Método para actualizar el monto total basado en las cuotas seleccionadas
                 updateTotal() {
                     this.amountPaid = this.installments
                         .filter(inst => this.selectedInstallments.includes(inst.id.toString()))
@@ -224,20 +226,24 @@
                         .toFixed(2);
                 },
                 
-                // Propiedad computada para filtrar las cuotas
                 get filteredInstallments() {
-                    if (this.searchQuery === '') {
+                    if (this.searchQuery.trim() === '') {
                         return this.installments;
                     }
+                    const searchTerm = this.searchQuery.toLowerCase();
                     return this.installments.filter(inst => {
-                        const searchTerm = this.searchQuery.toLowerCase();
-                        const serviceName = inst.payment_plan.service.name.toLowerCase();
                         const lotIdentifier = inst.payment_plan.lot.identifier.toLowerCase();
-                        return serviceName.includes(searchTerm) || lotIdentifier.includes(searchTerm);
+                        const serviceName = inst.payment_plan.service.name.toLowerCase();
+                        const installmentNumber = inst.installment_number.toString();
+
+                        return lotIdentifier.includes(searchTerm) || 
+                            serviceName.includes(searchTerm) || 
+                            installmentNumber.includes(searchTerm);
                     });
                 }
             }));
         });
     </script>
     @endpush
+    
 </x-app-layout>

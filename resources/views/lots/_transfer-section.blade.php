@@ -15,7 +15,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
             <x-input-label for="new_client_id" value="Nuevo Propietario" />
-            <select name="new_client_id" id="new_client_id" class="mt-1 block w-full border-2 border-gray-300 text-gray-900 rounded-xl shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-150" required>
+            <select name="new_client_id" id="new_client_id" class="select2 mt-1 block w-full border-2 border-gray-300 text-gray-900 rounded-xl shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-150" required>
                 <option value="">Seleccionar cliente</option>
                 @foreach($clients->where('id', '!=', $lot->client_id) as $client)
                     <option value="{{ $client->id }}">{{ $client->name }}</option>
