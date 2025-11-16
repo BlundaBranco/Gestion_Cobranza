@@ -39,4 +39,15 @@ class ReportController extends Controller
         // Pasar todas las variables a la vista
         return view('reports.income', compact('transactions', 'totalIncome', 'startDate', 'endDate', 'owners', 'ownerId'));
     }
+
+    public function overdueInstallments()
+    {
+        $overdueInstallments = \App\Models\Installment::where('status', 'vencida')
+            ->with(['paymentPlan.lot.client', 'transactions'])
+            ->orderBy('due_date', 'asc')
+            ->paginate(25); // Paginar para manejar grandes cantidades
+
+        return view('reports.overdue', compact('overdueInstallments'));
+    }
+    
 }

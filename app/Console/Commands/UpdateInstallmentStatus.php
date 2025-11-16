@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Installment;
-use App\Models\Lot; // <-- Importar el modelo Lot
+use App\Models\Lot;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class UpdateInstallmentStatus extends Command
 {
     protected $signature = 'installments:update-status';
-    protected $description = 'Actualiza cuotas a "vencida", calcula intereses y liquida lotes pagados.';
+    protected $description = 'Actualiza cuotas a "vencida", recalcula intereses y liquida lotes pagados.';
     private const MONTHLY_INTEREST_RATE = 0.05;
 
     public function handle()
@@ -22,10 +22,13 @@ class UpdateInstallmentStatus extends Command
 
         DB::beginTransaction();
         try {
-            // --- FASE 1: Actualizar Cuotas Vencidas y Aplicar Intereses ---
-            $this->updateOverdueInstallments();
+            // --- FASE 1: Marcar cuotas como vencidas ---
+            $this->markInstallmentsAsOverdue();
 
-            // --- FASE 2: Liquidar Lotes Completamente Pagados ---
+            // --- FASE 2: Recalcular intereses para todas las cuotas vencidas ---
+            $this->recalculateInterests();
+
+            // --- FASE 3: Liquidar lotes completamente pagados ---
             $this->liquidatePaidLots();
 
             DB::commit();
@@ -41,48 +44,60 @@ class UpdateInstallmentStatus extends Command
         }
     }
 
-    private function updateOverdueInstallments()
+    private function markInstallmentsAsOverdue()
     {
-        $today = Carbon::today();
-        $updatedCount = 0;
-        $interestAppliedCount = 0;
+        $updatedCount = Installment::where('status', 'pendiente')
+            ->where('due_date', '<', Carbon::today())
+            ->update(['status' => 'vencida']);
+            
+        $this->info("Cuotas marcadas como 'vencida': {$updatedCount}");
+    }
 
-        $installmentsToUpdate = Installment::where('status', 'pendiente')
-            ->where('due_date', '<', $today)
+    private function recalculateInterests()
+    {
+        $interestAppliedCount = 0;
+        
+        // Obtener todas las cuotas vencidas que no estén completamente pagadas
+        $overdueInstallments = Installment::where('status', 'vencida')
             ->with('transactions')
             ->get();
 
-        foreach ($installmentsToUpdate as $installment) {
-            $installment->status = 'vencida';
+        foreach ($overdueInstallments as $installment) {
+            // Usar el monto editable como base; si no existe, usar el calculado
+            $baseAmount = $installment->amount ?? $installment->base_amount;
             
+            // Sumar todos los pagos aplicados a esta cuota
             $totalPaid = $installment->transactions->sum('pivot.amount_applied');
-            $capitalBalance = ($installment->amount ?? $installment->base_amount) - $totalPaid;
+            
+            // El interés se calcula sobre el capital (monto base) que aún no se ha cubierto
+            $capitalBalance = $baseAmount - $totalPaid;
 
             if ($capitalBalance > 0) {
+                // CORRECCIÓN CLAVE: Reemplazar (=), no sumar (+=)
                 $interest = $capitalBalance * self::MONTHLY_INTEREST_RATE;
-                $installment->interest_amount += round($interest, 2); // Usar += para acumular si es necesario
+                $installment->interest_amount = round($interest, 2);
                 $interestAppliedCount++;
+            } else {
+                // Si el capital ya está pagado (posiblemente con pagos anteriores), el interés debería ser cero
+                $installment->interest_amount = 0;
             }
             
             $installment->save();
-            $updatedCount++;
         }
 
-        $this->info("Cuotas actualizadas a 'vencida': {$updatedCount}");
-        $this->info("Cuotas con interés aplicado/recalculado: {$interestAppliedCount}");
+        $this->info("Cuotas con interés recalculado: {$interestAppliedCount}");
     }
 
     private function liquidatePaidLots()
     {
         $liquidatedLots = 0;
         
-        // Obtener lotes 'vendidos' que ya no tienen cuotas pendientes o vencidas.
         $potentialLotsToLiquidate = Lot::where('status', 'vendido')
             ->whereDoesntHave('paymentPlans.installments', function ($query) {
                 $query->whereIn('status', ['pendiente', 'vencida']);
             })
             ->has('paymentPlans')
-            ->with('paymentPlans.installments.transactions') // Precargar para el cálculo final
+            ->with('paymentPlans.installments.transactions')
             ->get();
 
         foreach ($potentialLotsToLiquidate as $lot) {
@@ -98,7 +113,6 @@ class UpdateInstallmentStatus extends Command
                 }
             }
 
-            // Si la deuda real es cero (o insignificante), se liquida el lote.
             if ($totalDebtForLot <= 0.01) {
                 $lot->update(['status' => 'liquidado']);
                 $liquidatedLots++;
