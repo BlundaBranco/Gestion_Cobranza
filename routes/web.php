@@ -15,6 +15,8 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\OwnerTransferController;
+use App\Http\Controllers\BulkInstallmentUpdateController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -72,6 +74,9 @@ Route::middleware('auth')->group(function () {
     Route::post('lots/{lot}/transfer-owner', [OwnerTransferController::class, 'transfer'])->name('lots.transfer-owner');
 
     Route::put('/installments/{installment}', [InstallmentController::class, 'update'])->name('installments.update');
+    Route::post('/payment-plans/{plan}/bulk-update-installments', [BulkInstallmentUpdateController::class, 'update'])->name('installments.bulk-update');
+    Route::get('reports/overdue-installments', [ReportController::class, 'overdueInstallments'])->name('reports.overdue');
+
 });
 
 require __DIR__.'/auth.php';

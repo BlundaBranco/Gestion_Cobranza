@@ -15,6 +15,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Estadísticas generales (sin cambios)
         $stats = [
             'totalClients' => Client::count(),
             'totalLots' => Lot::count(),
@@ -24,7 +25,6 @@ class DashboardController extends Controller
             ])->count(),
         ];
 
-        // Usar DB::raw para agrupar por estado de forma eficiente
         $lotStatusSummary = Lot::select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -38,13 +38,26 @@ class DashboardController extends Controller
 
         $recentTransactions = Transaction::with('client')->latest()->take(5)->get();
 
-        // Nueva consulta para obtener cuotas vencidas
-        $overdueInstallments = Installment::where('status', 'vencida')
-            ->with(['paymentPlan.lot.client', 'transactions'])
-            ->orderBy('due_date', 'asc')
-            ->take(10) // Limitar resultados para rendimiento del dashboard
-            ->get();
+        // --- LÓGICA MODIFICADA PARA CUOTAS VENCIDAS ---
 
-        return view('dashboard', compact('stats', 'recentTransactions', 'systemSummary', 'overdueInstallments'));
+        // 1. Crear la consulta base para cuotas vencidas.
+        $overdueQuery = Installment::where('status', 'vencida')
+            ->with(['paymentPlan.lot.client', 'transactions']);
+
+        // 2. Obtener el conteo total de cuotas vencidas.
+        $overdueInstallmentsCount = $overdueQuery->count();
+
+        // 3. Obtener solo las primeras 5 (o 10) para mostrar en el dashboard.
+        $overdueInstallments = $overdueQuery->orderBy('due_date', 'asc')->take(5)->get();
+
+        // --- FIN DE LA MODIFICACIÓN ---
+
+        return view('dashboard', compact(
+            'stats', 
+            'recentTransactions', 
+            'systemSummary', 
+            'overdueInstallments', 
+            'overdueInstallmentsCount' // Pasar el nuevo conteo a la vista
+        ));
     }
 }
