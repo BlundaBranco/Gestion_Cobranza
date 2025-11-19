@@ -164,18 +164,36 @@
                             <p class="text-2xl font-bold text-gray-900">${{ number_format($plan->total_amount, 2) }}</p>
                         </div>
                     </div>
-                    
+
+                    {{-- Barra de Progreso y Acciones del Plan --}}
                     <div class="space-y-2">
-                        <div class="flex justify-between text-sm">
+                        <div class="flex justify-between items-center text-sm">
                             <span class="font-semibold text-gray-700">Progreso del Plan</span>
-                            <span class="font-bold text-gray-900">{{ $paidInstallments }} / {{ $totalInstallments }} cuotas pagadas</span>
+                            {{-- Botón de Eliminar Plan --}}
+                            <div>
+                                @can('forceDelete', $plan)
+                                    <form action="{{ route('payment-plans.destroy', $plan) }}" method="POST" onsubmit="return confirm('ADMIN: ¿Seguro que deseas eliminar este plan? Esta acción es irreversible.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-xs text-red-500 hover:underline">Eliminar Plan (Forzar)</button>
+                                    </form>
+                                @else
+                                    @if(!$plan->installments()->whereHas('transactions')->exists())
+                                        <form action="{{ route('payment-plans.destroy', $plan) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar este plan de pago?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-xs text-red-500 hover:underline">Eliminar Plan</button>
+                                        </form>
+                                    @endif
+                                @endcan
+                            </div>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                             <div class="bg-green-500 h-2.5 rounded-full" style="width: {{ $progressPercentage }}%"></div>
                         </div>
                         <div class="flex justify-between text-xs text-gray-600">
                             <span>{{ number_format($progressPercentage, 1) }}% completado</span>
-                            <span>{{ $totalInstallments - $paidInstallments }} cuotas pendientes</span>
+                            <span>{{ $paidInstallments }} / {{ $totalInstallments }} cuotas pagadas</span>
                         </div>
                     </div>
                 </div>
@@ -190,5 +208,4 @@
             </div>
         @endforelse
     </div>
-
 </div>
