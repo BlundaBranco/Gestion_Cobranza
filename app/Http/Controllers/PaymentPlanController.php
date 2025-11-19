@@ -67,16 +67,23 @@ class PaymentPlanController extends Controller
 
     public function destroy(\App\Models\PaymentPlan $plan)
     {
-        if ($plan->installments()->whereHas('transactions')->exists()) {
-            if (auth()->user()->can('forceDelete', 'App\Models\PaymentPlan')) {
-                $plan->delete();
-                return back()->with('success', 'Plan de pago eliminado forzosamente.');
-            }
-            return back()->with('error', 'No se puede eliminar: el plan tiene pagos registrados. Solo un administrador puede forzar esta acción.');
+        // Primero, verifica si el plan tiene transacciones asociadas.
+        $hasTransactions = $plan->installments()->whereHas('transactions')->exists();
+
+        // Si NO tiene transacciones, cualquier usuario puede eliminarlo.
+        if (!$hasTransactions) {
+            $plan->delete();
+            return back()->with('success', 'Plan de pago eliminado exitosamente.');
         }
 
-        $plan->delete();
-        return back()->with('success', 'Plan de pago eliminado exitosamente.');
+        // Si SÍ tiene transacciones, solo se puede eliminar si el usuario tiene permiso para forzarlo.
+        if ($hasTransactions && auth()->user()->can('forceDelete', $plan)) {
+            $plan->delete();
+            return back()->with('success', 'Plan de pago y su historial han sido eliminados forzosamente.');
+        }
+
+        // Si llega aquí, es porque tiene transacciones y el usuario no es admin.
+        return back()->with('error', 'No se puede eliminar: el plan tiene pagos registrados. Solo un administrador puede forzar esta acción.');
     }
 
     public function generateInstallments(PaymentPlan $paymentPlan)
