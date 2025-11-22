@@ -13,7 +13,7 @@ class UpdateInstallmentStatus extends Command
 {
     protected $signature = 'installments:update-status';
     protected $description = 'Actualiza cuotas a "vencida", recalcula intereses y liquida lotes pagados.';
-    private const MONTHLY_INTEREST_RATE = 0.05;
+    private const MONTHLY_INTEREST_RATE = 0.1;
 
     public function handle()
     {

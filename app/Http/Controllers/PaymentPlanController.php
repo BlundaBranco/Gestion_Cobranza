@@ -7,6 +7,7 @@ use App\Models\PaymentPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
 
 class PaymentPlanController extends Controller
 {
@@ -58,6 +59,9 @@ class PaymentPlanController extends Controller
             }
 
             DB::commit();
+
+            Artisan::call('installments:update-status');
+            
             return redirect()->route('lots.edit', $lot)->with('success', 'Plan de pago creado exitosamente.');
         } catch (\Exception $e) {
             DB::rollBack();
