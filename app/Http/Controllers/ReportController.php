@@ -6,6 +6,8 @@ use App\Models\Transaction;
 use App\Models\Owner; // Importar el modelo Owner
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon; // Necesario para las fechas por defecto
+use App\Exports\IncomeExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -50,4 +52,13 @@ class ReportController extends Controller
         return view('reports.overdue', compact('overdueInstallments'));
     }
     
+    public function export(Request $request)
+    {
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
+        $ownerId = $request->input('owner_id');
+
+        return Excel::download(new IncomeExport($startDate, $endDate, $ownerId), 'reporte_ingresos.xlsx');
+    }
+
 }

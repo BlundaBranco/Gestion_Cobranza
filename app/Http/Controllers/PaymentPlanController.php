@@ -11,28 +11,41 @@ use Illuminate\Support\Facades\Artisan;
 
 class PaymentPlanController extends Controller
 {
-
-    public function store(Request $request, Lot $lot)
+    /**
+     * Almacena un nuevo plan de pago creado manualmente desde la interfaz.
+     */
+    public function store(Request $request, \App\Models\Lot $lot)
     {
+        // 1. Validar SOLO los datos que sí llegan del formulario
+        // Quitamos 'start_date' y 'number_of_installments' porque los calculamos abajo
         $validated = $request->validate([
             'service_id' => 'required|exists:services,id',
-            'total_amount' => 'required|numeric|min:0', // El total_amount original se mantiene como fuente de verdad
-            'number_of_installments' => 'required|integer|min:1',
-            'start_date' => 'required|date',
-            'amounts' => 'required|array',
-            'amounts.*' => 'required|numeric|min:0',
-            'due_dates' => 'required|array',
-            'due_dates.*' => 'required|date',
+            'amounts'    => 'required|array',
+            'amounts.*'  => 'required|numeric|min:0',
+            'due_dates'  => 'required|array',
+            'due_dates.*'=> 'required|date',
+            'numbers'    => 'required|array',
+            'numbers.*'  => 'required',
         ]);
 
-        if (count($validated['amounts']) != $validated['number_of_installments']) {
-            return back()->with('error', 'El número de cuotas no coincide con los montos enviados.');
-        }
+        // 2. Calcular los datos derivados automáticamente
         
-        // No se recalcula el total, se usa el 'total_amount' enviado por el usuario
-        // y la advertencia se maneja en el frontend.
+        // El número real de cuotas es el tamaño del array
+        $realCount = count($validated['amounts']); 
         
-        $exists = \App\Models\PaymentPlan::where('lot_id', $lot->id)->where('service_id', $validated['service_id'])->exists();
+        // El total real es la suma del array
+        $realTotal = array_sum($validated['amounts']); 
+        
+        // La fecha de inicio es la fecha más antigua del array de vencimientos
+        $dates = $validated['due_dates'];
+        sort($dates); // Ordenar ascendente
+        $realStartDate = $dates[0];
+
+        // 3. Validar duplicados
+        $exists = \App\Models\PaymentPlan::where('lot_id', $lot->id)
+            ->where('service_id', $validated['service_id'])
+            ->exists();
+
         if ($exists) {
             return back()->with('error', 'Ya existe un plan de pago para este lote y servicio.');
         }
@@ -40,68 +53,81 @@ class PaymentPlanController extends Controller
         try {
             DB::beginTransaction();
 
-            // Crear el plan de pago con el total_amount original
+            // 4. Crear el Plan de Pago con los datos calculados
             $paymentPlan = $lot->paymentPlans()->create([
-                'service_id' => $validated['service_id'],
-                'total_amount' => $validated['total_amount'],
-                'number_of_installments' => $validated['number_of_installments'],
-                'start_date' => $validated['start_date'],
+                'service_id'             => $validated['service_id'],
+                'total_amount'           => $realTotal,
+                'number_of_installments' => $realCount,
+                'start_date'             => $realStartDate,
             ]);
 
+            // 5. Crear las Cuotas
             foreach ($validated['amounts'] as $index => $amount) {
                 $paymentPlan->installments()->create([
-                    'installment_number' => $index + 1,
-                    'due_date' => $validated['due_dates'][$index],
-                    'amount' => $amount,
-                    // El base_amount aquí es informativo, el 'amount' es el principal
-                    'base_amount' => round($validated['total_amount'] / $validated['number_of_installments'], 2),
+                    'installment_number' => $validated['numbers'][$index],
+                    'due_date'           => $validated['due_dates'][$index],
+                    'amount'             => $amount,
+                    'base_amount'        => $amount,
+                    'status'             => 'pendiente'
                 ]);
             }
+            
+            // 6. Actualizar estados inmediatamente (vencidas, intereses, etc)
+            \Illuminate\Support\Facades\Artisan::call('installments:update-status');
 
             DB::commit();
 
-            Artisan::call('installments:update-status');
-            
             return redirect()->route('lots.edit', $lot)->with('success', 'Plan de pago creado exitosamente.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->route('lots.edit', $lot)->with('error', 'Error al crear el plan: ' . $e->getMessage());
+            return back()->with('error', 'Error técnico al crear el plan: ' . $e->getMessage())->withInput();
         }
     }
 
-    public function destroy(\App\Models\PaymentPlan $plan)
+    /**
+     * Elimina un plan de pago.
+     */
+    public function destroy(PaymentPlan $plan)
     {
-        // Primero, verifica si el plan tiene transacciones asociadas.
+        // Verificar si el plan tiene transacciones asociadas (pagos reales)
         $hasTransactions = $plan->installments()->whereHas('transactions')->exists();
 
-        // Si NO tiene transacciones, cualquier usuario puede eliminarlo.
+        // Escenario 1: Sin pagos -> Eliminación directa permitida para todos
         if (!$hasTransactions) {
             $plan->delete();
             return back()->with('success', 'Plan de pago eliminado exitosamente.');
         }
 
-        // Si SÍ tiene transacciones, solo se puede eliminar si el usuario tiene permiso para forzarlo.
+        // Escenario 2: Con pagos -> Solo Admin puede forzar la eliminación (vía Policy)
         if ($hasTransactions && auth()->user()->can('forceDelete', $plan)) {
             $plan->delete();
-            return back()->with('success', 'Plan de pago y su historial han sido eliminados forzosamente.');
+            return back()->with('success', 'Plan de pago y su historial han sido eliminados forzosamente por el administrador.');
         }
 
-        // Si llega aquí, es porque tiene transacciones y el usuario no es admin.
+        // Escenario 3: Con pagos y usuario normal -> Denegar
         return back()->with('error', 'No se puede eliminar: el plan tiene pagos registrados. Solo un administrador puede forzar esta acción.');
     }
 
+    /**
+     * Genera cuotas automáticamente dividiendo el total.
+     * Método público para ser usado por Seeders o Importadores de Excel.
+     */
     public function generateInstallments(PaymentPlan $paymentPlan)
     {
         $installments = [];
+        // Calcular monto base con 2 decimales
         $baseAmount = round($paymentPlan->total_amount / $paymentPlan->number_of_installments, 2);
         $startDate = Carbon::parse($paymentPlan->start_date);
         
-        // Distribuir la diferencia por el redondeo en la primera cuota
+        // Calcular diferencia por redondeo para sumarla a la primera cuota
         $totalCalculated = $baseAmount * $paymentPlan->number_of_installments;
         $difference = $paymentPlan->total_amount - $totalCalculated;
 
         for ($i = 1; $i <= $paymentPlan->number_of_installments; $i++) {
             $currentAmount = $baseAmount;
+            
+            // Ajuste de centavos en la primera cuota
             if ($i === 1) {
                 $currentAmount += $difference;
             }
@@ -111,13 +137,13 @@ class PaymentPlanController extends Controller
                 'installment_number' => $i,
                 'due_date' => $startDate->copy()->addMonths($i - 1)->toDateString(),
                 'base_amount' => $currentAmount,
-                'amount' => $currentAmount, // <-- AÑADIR ESTA LÍNEA
+                'amount' => $currentAmount, // Sincronizar amount editable con base
+                'status' => 'pendiente',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
         }
 
-        // Inserción masiva para eficiencia
         DB::table('installments')->insert($installments);
     }
 }

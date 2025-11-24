@@ -31,4 +31,32 @@ class InstallmentController extends Controller
             return back()->with('success', 'Cuota actualizada correctamente.');
         }
 
+    public function store(Request $request, \App\Models\PaymentPlan $plan)
+        {
+            $validated = $request->validate([
+                'installment_number' => 'required|integer', // 0 para enganche extra, o el N° siguiente
+                'due_date' => 'required|date',
+                'amount' => 'required|numeric|min:0',
+            ]);
+
+            // 1. Crear la nueva cuota
+            $plan->installments()->create([
+                'installment_number' => $validated['installment_number'],
+                'due_date' => $validated['due_date'],
+                'amount' => $validated['amount'],
+                'base_amount' => $validated['amount'],
+                'status' => 'pendiente'
+            ]);
+            
+            // 2. Actualizar los totales del Plan de Pago
+            $plan->total_amount += $validated['amount']; // Sumar el dinero
+            $plan->number_of_installments += 1;          // Sumar 1 a la cantidad de cuotas
+            $plan->save();
+
+            // 3. Ejecutar comando para verificar si la fecha ya pasó (vencida/intereses)
+            \Illuminate\Support\Facades\Artisan::call('installments:update-status');
+
+            return back()->with('success', 'Cuota adicional agregada correctamente.');
+        }
+
 }

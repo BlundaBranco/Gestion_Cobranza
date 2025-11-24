@@ -38,6 +38,17 @@ class TransactionController extends Controller
         return view('transactions.index', compact('transactions', 'owners'));
     }
 
+    public function update(Request $request, Transaction $transaction)
+        {
+            $validated = $request->validate([
+                'payment_date' => 'required|date',
+            ]);
+
+            $transaction->update($validated);
+
+            return back()->with('success', 'Fecha de pago actualizada correctamente.');
+        }
+
     public function create(Request $request)
     {
         $clients = Client::orderBy('name')->get();
