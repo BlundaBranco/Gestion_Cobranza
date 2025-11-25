@@ -49,6 +49,28 @@ class TransactionController extends Controller
             return back()->with('success', 'Fecha de pago actualizada correctamente.');
         }
 
+    public function destroy(Transaction $transaction)
+    {
+        DB::transaction(function () use ($transaction) {
+            // 1. Revertir el saldo en las cuotas afectadas
+            foreach ($transaction->installments as $installment) {
+                $amountApplied = $installment->pivot->amount_applied;
+                
+                // Si la cuota estaba pagada, volverla a pendiente (o vencida si la fecha pasó)
+                if ($installment->status === 'pagada') {
+                    $installment->status = $installment->due_date < now() ? 'vencida' : 'pendiente';
+                }
+                $installment->save();
+            }
+
+            // 2. Eliminar la transacción (la tabla pivote se limpia sola por el onDelete cascade)
+            $transaction->delete();
+        });
+
+        return back()->with('success', 'Transacción eliminada y saldos revertidos correctamente.');
+    }
+
+
     public function create(Request $request)
     {
         $clients = Client::orderBy('name')->get();

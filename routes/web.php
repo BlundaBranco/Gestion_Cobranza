@@ -21,11 +21,6 @@ use App\Http\Controllers\ReportController;
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
 */
 
 Route::get('/', function () {
@@ -47,9 +42,13 @@ Route::middleware('auth')->group(function () {
     Route::resource('owners', OwnerController::class);
 
     // --- GESTIÓN DE CLIENTES ---
+    // Exportar Estado de Cuenta (CORRECCIÓN: Faltaba esta ruta)
+    Route::get('clients/{client}/export', [ClientController::class, 'export'])->name('clients.export');
+    
     // Documentos
     Route::post('clients/{client}/documents', [ClientDocumentController::class, 'store'])->name('clients.documents.store');
     Route::delete('documents/{document}', [ClientDocumentController::class, 'destroy'])->name('documents.destroy');
+    
     // API interna para obtener cuotas en el formulario de pago
     Route::get('/clients/{client}/pending-installments', [ClientInstallmentController::class, 'index'])->name('clients.pending-installments');
 
@@ -75,9 +74,10 @@ Route::middleware('auth')->group(function () {
     // --- TRANSACCIONES ---
     // PDF del Recibo
     Route::get('transactions/{transaction}/pdf', [TransactionController::class, 'showPdf'])->name('transactions.pdf');
-    // Resource: Permitimos index, create, store y UPDATE (para editar fecha de pago)
-    // Excluimos show, edit (vista) y destroy (borrado por ahora no implementado o restringido)
-    Route::resource('transactions', TransactionController::class)->except(['show', 'edit', 'destroy']);
+    
+    // Resource: Habilitamos index, create, store, update y destroy.
+    // show y edit no se usan (se usa pdf y modales/inline).
+    Route::resource('transactions', TransactionController::class)->except(['show', 'edit']);
 
     // --- REPORTES ---
     Route::get('reports/income', [ReportController::class, 'incomeReport'])->name('reports.income');

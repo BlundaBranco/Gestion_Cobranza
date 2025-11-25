@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use Illuminate\Http\Request;
+use App\Exports\ClientAccountExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ClientController extends Controller
 {
@@ -23,6 +25,11 @@ class ClientController extends Controller
         $clients = $query->latest()->paginate(10)->withQueryString();
 
         return view('clients.index', compact('clients'));
+    }
+
+    public function export(Client $client)
+    {
+        return Excel::download(new ClientAccountExport($client), 'estado_cuenta_' . $client->id . '.xlsx');
     }
 
     public function create()
