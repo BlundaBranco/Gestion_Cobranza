@@ -60,6 +60,8 @@
 
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                
+                <!-- Lotes/Servicios -->
                 <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
                     <div class="flex items-center justify-between">
                         <div>
@@ -73,19 +75,35 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Deuda Total (Desglosada) -->
                 <div class="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
-                    <div class="flex items-center justify-between">
-                        <div>
+                    <div class="flex items-start justify-between">
+                        <div class="w-full mr-4">
                             <p class="text-sm font-medium text-red-100 mb-1">Deuda Total</p>
-                            <p class="text-3xl font-bold">${{ number_format($stats['totalDebt'], 2) }}</p>
+                            <p class="text-3xl font-bold">${{ number_format($stats['total_debt'], 2) }}</p>
+                            
+                            {{-- Desglose --}}
+                            <div class="mt-3 pt-2 border-t border-white/20 text-xs font-medium opacity-90 space-y-1">
+                                <div class="flex justify-between">
+                                    <span>Capital:</span>
+                                    <span>${{ number_format($stats['debt_capital'], 2) }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Interés:</span>
+                                    <span>${{ number_format($stats['debt_interest'], 2) }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
                     </div>
                 </div>
+
+                <!-- Cuotas Pendientes -->
                 <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
                     <div class="flex items-center justify-between">
                         <div>
@@ -99,13 +117,27 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Total Pagado (Desglosado) -->
                 <div class="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
-                    <div class="flex items-center justify-between">
-                        <div>
+                    <div class="flex items-start justify-between">
+                        <div class="w-full mr-4">
                             <p class="text-sm font-medium text-green-100 mb-1">Total Pagado</p>
-                            <p class="text-3xl font-bold">${{ number_format($stats['totalPaid'], 2) }}</p>
+                            <p class="text-3xl font-bold">${{ number_format($stats['total_paid'], 2) }}</p>
+
+                            {{-- Desglose --}}
+                            <div class="mt-3 pt-2 border-t border-white/20 text-xs font-medium opacity-90 space-y-1">
+                                <div class="flex justify-between">
+                                    <span>Capital:</span>
+                                    <span>${{ number_format($stats['paid_capital'], 2) }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Interés:</span>
+                                    <span>${{ number_format($stats['paid_interest'], 2) }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
