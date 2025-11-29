@@ -27,19 +27,38 @@
 </head>
 <body>
     @php
-        $firstInstallment = $transaction->installments->first();
-        $lot = $firstInstallment->paymentPlan->lot ?? null;
+        // Configurar idioma español para fechas
+        \Carbon\Carbon::setLocale('es');
+
+        // 1. Obtener las cuotas ordenadas
+        $installments = $transaction->installments->sortBy('installment_number');
+        $firstInstallment = $installments->first();
         
+        // 2. Datos del Lote
+        $lot = $firstInstallment->paymentPlan->lot ?? null;
         $manzana = $lot->block_number ?? 'N/A';
         $lote = $lot->lot_number ?? 'N/A';
-        $pagoNum = $firstInstallment->installment_number ?? 'N/A';
+        
+        // 3. Generar lista de números (Ej: "20, 21")
+        $pagoNum = $installments->pluck('installment_number')->join(', ');
+        
+        // 4. Total de cuotas
         $pagoTotal = $firstInstallment->paymentPlan->number_of_installments ?? 'N/A';
+
+        // 5. Generar lista de meses (Ej: "octubre 2025, noviembre 2025")
+        $meses = $installments->sortBy('due_date')->map(function($inst) {
+            return ucfirst($inst->due_date->translatedFormat('F Y'));
+        })->unique()->join(', ');
+
+        // 6. Concepto final para mostrar
+        // Si hay nota manual, se usa. Si no, se arma "Servicio (Mensualidad: Meses)"
+        $nombreServicio = $firstInstallment->paymentPlan->service->name ?? 'Pago';
+        $conceptoFinal = $transaction->notes ? $transaction->notes : "$nombreServicio (Mensualidad: $meses)";
     @endphp
+
     <div class="receipt-box">
         <div class="header">
             <div class="header-col" style="width: 100px;">
-                {{-- Colocar aquí la imagen del logo si se tiene --}}
-                {{-- <img src="{{ public_path('logo.png') }}" alt="Logo" class="logo"> --}}
                 <span class="logo" style="font-weight: bold; font-size:14px;">LOMAS DEL PACIFICO</span>
             </div>
             <div class="header-col company-details">
@@ -73,8 +92,9 @@
                 <tr>
                     <td class="label" style="vertical-align: top;">Por cuenta de:</td>
                     <td class="content">
-                        {{-- Se usa el campo de notas para este propósito --}}
-                        {{ $transaction->notes ?? ($transaction->installments->first()->paymentPlan->service->name ?? 'Pago de mensualidad') }}
+                        {{-- AQUÍ MOSTRAMOS EL CONCEPTO CON LOS MESES --}}
+                        {{ $conceptoFinal }}
+                        
                         <table class="lote-table">
                             <tr>
                                 <td>lote #</td>
