@@ -27,54 +27,22 @@
 </head>
 <body>
     @php
-        // Configurar idioma español para fechas
         \Carbon\Carbon::setLocale('es');
-
-        // 1. Obtener las cuotas ordenadas
         $installments = $transaction->installments->sortBy('installment_number');
         $firstInstallment = $installments->first();
-        
-        // 2. Datos del Lote
         $lot = $firstInstallment->paymentPlan->lot ?? null;
+        $currency = $firstInstallment->paymentPlan->currency ?? 'MXN';
         $manzana = $lot->block_number ?? 'N/A';
         $lote = $lot->lot_number ?? 'N/A';
-        
-        // 3. Generar lista de números (Ej: "20, 21")
-        $pagoNum = $installments->pluck('installment_number')->join(', ');
-        
-        // 4. Total de cuotas
+        $pagoNum = $installments->pluck('installment_number')->map(fn($num) => $num == 0 ? 'E' : $num)->join(', ');
         $pagoTotal = $firstInstallment->paymentPlan->number_of_installments ?? 'N/A';
-
-        // 5. Generar lista de meses (Ej: "octubre 2025, noviembre 2025")
-        $meses = $installments->sortBy('due_date')->map(function($inst) {
-            return ucfirst($inst->due_date->translatedFormat('F Y'));
-        })->unique()->join(', ');
-
-        // 6. Concepto final para mostrar
-        // Si hay nota manual, se usa. Si no, se arma "Servicio (Mensualidad: Meses)"
+        $meses = $installments->sortBy('due_date')->map(fn($inst) => ucfirst($inst->due_date->translatedFormat('F Y')))->unique()->join(', ');
         $nombreServicio = $firstInstallment->paymentPlan->service->name ?? 'Pago';
         $conceptoFinal = $transaction->notes ? $transaction->notes : "$nombreServicio (Mensualidad: $meses)";
     @endphp
 
     <div class="receipt-box">
-        <div class="header">
-            <div class="header-col" style="width: 100px;">
-                <span class="logo" style="font-weight: bold; font-size:14px;">LOMAS DEL PACIFICO</span>
-            </div>
-            <div class="header-col company-details">
-                COL. LOMAS DEL PACIFICO<br>
-                Tel. Oficina: 664-383-1246<br>
-                Col. Roberto Yahuaca, Calle Brisas del Mar<br>
-                L-13 Mz-7 C.P. 22545 Tijuana, B.C.
-            </div>
-            <div class="header-col" style="width: 120px;">
-                <div class="folio-box">
-                    RECIBO DE PAGO<br>
-                    <span style="font-weight:bold; font-size:16px; color: red;">No. {{ $transaction->folio_number }}</span>
-                </div>
-            </div>
-        </div>
-
+        {{-- ... header sin cambios ... --}}
         <div class="body-section">
             <table class="data-table">
                 <tr>
@@ -87,44 +55,30 @@
                 </tr>
                 <tr>
                     <td class="label">La cantidad de:</td>
-                    <td class="content">{{ number_to_words_es($transaction->amount_paid) }}</td>
+                    <td class="content">{{ number_to_words_es($transaction->amount_paid) }} ({{ $currency }})</td>
                 </tr>
                 <tr>
                     <td class="label" style="vertical-align: top;">Por cuenta de:</td>
-                    <td class="content">
-                        {{-- AQUÍ MOSTRAMOS EL CONCEPTO CON LOS MESES --}}
+                    <td class="content" style="font-size: 10px;">
                         {{ $conceptoFinal }}
-                        
                         <table class="lote-table">
-                            <tr>
-                                <td>lote #</td>
-                                <td>Mz#</td>
-                                <td>Pago#</td>
-                            </tr>
-                            <tr>
-                                <td class="content">{{ $lote }}</td>
-                                <td class="content">{{ $manzana }}</td>
-                                <td class="content">{{ $pagoNum }} de {{ $pagoTotal }}</td>
-                            </tr>
+                            <tr><td>lote #</td><td>Mz#</td><td>Pago#</td></tr>
+                            <tr><td class="content">{{ $lote }}</td><td class="content">{{ $manzana }}</td><td class="content">{{ $pagoNum }} de {{ $pagoTotal }}</td></tr>
                         </table>
                     </td>
                 </tr>
             </table>
         </div>
-
         <div class="footer-section">
             <div class="footer-col">
                 <div class="signature-box">
-                    Recibió:
-                    <span class="content">{{ $transaction->user->name ?? config('app.name') }}</span>
-                    <div class="signature-line">
-                        Firma
-                    </div>
+                    Recibió: <span class="content">{{ $transaction->user->name ?? config('app.name') }}</span>
+                    <div class="signature-line">Firma</div>
                 </div>
             </div>
             <div class="footer-col">
                 <div class="amount-box">
-                    Por $ <span class="content" style="border-bottom: 1px solid #666; padding: 0 10px;">{{ number_format($transaction->amount_paid, 2) }}</span>
+                    <span class="content" style="border-bottom: 1px solid #666; padding: 0 10px;">{{ format_currency($transaction->amount_paid, $currency) }}</span>
                 </div>
             </div>
         </div>

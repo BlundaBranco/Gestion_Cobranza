@@ -20,6 +20,7 @@ class PaymentPlanController extends Controller
         // Quitamos 'start_date' y 'number_of_installments' porque los calculamos abajo
         $validated = $request->validate([
             'service_id' => 'required|exists:services,id',
+            'currency' => 'required|in:MXN,USD',
             'amounts'    => 'required|array',
             'amounts.*'  => 'required|numeric|min:0',
             'due_dates'  => 'required|array',
@@ -56,6 +57,7 @@ class PaymentPlanController extends Controller
             // 4. Crear el Plan de Pago con los datos calculados
             $paymentPlan = $lot->paymentPlans()->create([
                 'service_id'             => $validated['service_id'],
+                'currency'               => $validated['currency'],
                 'total_amount'           => $realTotal,
                 'number_of_installments' => $realCount,
                 'start_date'             => $realStartDate,
@@ -84,6 +86,18 @@ class PaymentPlanController extends Controller
             return back()->with('error', 'Error técnico al crear el plan: ' . $e->getMessage())->withInput();
         }
     }
+
+    public function updateCurrency(Request $request, \App\Models\PaymentPlan $plan)
+    {
+        $validated = $request->validate([
+            'currency' => 'required|in:MXN,USD',
+        ]);
+
+        $plan->update($validated);
+
+        return back()->with('success', 'La moneda del plan de pago ha sido actualizada.');
+    }
+
 
     /**
      * Elimina un plan de pago.

@@ -25,7 +25,7 @@
                 <form action="{{ route('lots.index') }}" method="GET">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <div class="md:col-span-3">
-                            <x-input-label for="search" value="Buscar Lote o Cliente" />
+                            <x-input-label for="search" value="Buscar" />
                             <x-text-input id="search" name="search" type="text" class="mt-1 block w-full" :value="request('search')" placeholder="Busca por 'Manzana 10 Lote 5', 'M 10', cliente o socio..." />
                         </div>
                         <div class="flex items-end gap-2">
@@ -42,9 +42,6 @@
             @if($lots->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     @foreach($lots as $lot)
-                        @php
-                            $totalDebt = collect($lot->payment_plans_summary)->sum('debt');
-                        @endphp
                         <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between overflow-hidden">
                             <div class="p-6">
                                 <div class="flex items-start justify-between mb-4">
@@ -55,10 +52,10 @@
                                     </div>
                                     @php
                                         $statusClass = match($lot->status) {
-                                            'disponible' => 'bg-green-100 text-green-800 border-2 border-green-200',
-                                            'vendido' => 'bg-yellow-100 text-yellow-800 border-2 border-yellow-200',
-                                            'liquidado' => 'bg-blue-100 text-blue-800 border-2 border-blue-200',
-                                            default => 'bg-gray-100 text-gray-800 border-2 border-gray-200',
+                                            'disponible' => 'bg-green-100 text-green-800 border border-green-200',
+                                            'vendido' => 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+                                            'liquidado' => 'bg-blue-100 text-blue-800 border border-blue-200',
+                                            default => 'bg-gray-100 text-gray-800 border border-gray-200',
                                         };
                                     @endphp
                                     <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $statusClass }}">
@@ -66,35 +63,43 @@
                                     </span>
                                 </div>
 
-                                @if($totalDebt > 0)
-                                    <div class="mb-4 p-3 bg-red-50 border-2 border-red-200 rounded-lg">
+                                @if($lot->total_debt > 0.01)
+                                    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                                         <div class="flex items-center justify-between">
                                             <span class="text-sm font-semibold text-red-900">Deuda Total</span>
-                                            <span class="text-lg font-bold text-red-600">${{ number_format($totalDebt, 2) }}</span>
+                                            <span class="text-lg font-bold text-red-600">
+                                                {{-- Obtener la moneda de forma segura --}}
+                                                @php
+                                                    $currencyForLotCard = $lot->payment_plans_summary->isNotEmpty() ? $lot->payment_plans_summary->first()['currency'] : 'MXN';
+                                                @endphp
+                                                {{ format_currency($lot->total_debt, $currencyForLotCard) }}
+                                            </span>
                                         </div>
                                     </div>
                                 @else
-                                    <div class="mb-4 p-3 bg-green-50 border-2 border-green-200 rounded-lg">
+                                    @if($lot->payment_plans_summary->isNotEmpty())
+                                    <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                                         <div class="flex items-center justify-center gap-2">
                                             <span class="text-sm font-semibold text-green-900">Sin deudas pendientes</span>
                                         </div>
                                     </div>
+                                    @endif
                                 @endif
 
-                                <div class="pt-4 border-t-2 border-gray-100 space-y-3">
+                                <div class="pt-4 border-t border-gray-100 space-y-3">
                                     @foreach($lot->payment_plans_summary as $summary)
                                         <div class="flex justify-between items-center text-sm">
                                             <span class="text-gray-600">{{ $summary['service_name'] }}</span>
                                             <span class="font-bold {{ $summary['debt'] > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                                ${{ number_format($summary['debt'], 2) }}
+                                                {{ format_currency($summary['debt'], $summary['currency']) }}
                                             </span>
                                         </div>
                                     @endforeach
                                 </div>
                             </div>
                             
-                            <div class="flex items-center justify-end gap-2 bg-gray-50 px-6 py-4 border-t-2 border-gray-100">
-                                <a href="{{ route('lots.edit', $lot) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg transition-all duration-150">
+                            <div class="flex items-center justify-end gap-2 bg-gray-50 px-6 py-4 border-t border-gray-100">
+                                <a href="{{ route('lots.edit', $lot) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg transition-all duration-150 text-sm">
                                     Gestionar
                                 </a>
                             </div>
@@ -103,7 +108,7 @@
                 </div>
                 
                 @if ($lots->hasPages())
-                    <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 p-6">
+                    <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 p-6 mt-6">
                         {{ $lots->links() }}
                     </div>
                 @endif

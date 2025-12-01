@@ -13,9 +13,17 @@
     <tbody>
         @forelse ($installments as $installment)
             @php
+
+                // Asegurarse de que las relaciones necesarias estén cargadas para evitar N+1
+                $installment->loadMissing('paymentPlan.lot.client', 'transactions');
+                
                 $totalDue = ($installment->amount ?? $installment->base_amount) + $installment->interest_amount;
                 $totalPaid = $installment->transactions->sum('pivot.amount_applied');
                 $remaining = $totalDue - $totalPaid;
+
+                // Obtener la moneda de la relación de la cuota
+                $currency = $installment->paymentPlan->currency ?? 'MXN';
+
             @endphp
             @if($remaining > 0.005)
                 <tr class="bg-white border-b hover:bg-gray-50">
@@ -32,7 +40,7 @@
                         {{ $installment->due_date->format('d/m/Y') }}
                     </td>
                     <td class="px-6 py-4 font-bold text-gray-800">
-                        ${{ number_format($remaining, 2) }}
+                        {{ format_currency($remaining, $currency) }}
                     </td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-4">
