@@ -26,7 +26,7 @@
             @foreach ($lot->paymentPlans as $plan)
                 <tr>
                     <td colspan="6" style="font-weight: bold;">
-                        Plan: {{ $plan->service->name }} - Total: ${{ number_format($plan->total_amount, 2) }}
+                        Plan: {{ $plan->service->name }} - Total: {{ format_currency($plan->total_amount, $plan->currency) }}
                     </td>
                 </tr>
                 <tr>
@@ -47,11 +47,11 @@
                     <tr>
                         <td style="border: 1px solid #000000;">{{ $installment->installment_number }}</td>
                         <td style="border: 1px solid #000000;">{{ $installment->due_date->format('d/m/Y') }}</td>
-                        <td style="border: 1px solid #000000;">${{ number_format($installment->amount ?? $installment->base_amount, 2) }}</td>
-                        <td style="border: 1px solid #000000;">${{ number_format($installment->interest_amount, 2) }}</td>
-                        <td style="border: 1px solid #000000;">${{ number_format($totalPaid, 2) }}</td>
+                        <td style="border: 1px solid #000000;">{{ format_currency($installment->amount ?? $installment->base_amount, $plan->currency) }}</td>
+                        <td style="border: 1px solid #000000;">{{ format_currency($installment->interest_amount, $plan->currency) }}</td>
+                        <td style="border: 1px solid #000000;">{{ format_currency($totalPaid, $plan->currency) }}</td>
                         <td style="border: 1px solid #000000; color: {{ $remaining > 0.005 ? 'red' : 'green' }};">
-                            ${{ number_format($remaining, 2) }}
+                            {{ format_currency($remaining, $plan->currency) }}
                         </td>
                     </tr>
                 @endforeach

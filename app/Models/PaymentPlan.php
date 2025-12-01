@@ -12,6 +12,7 @@ class PaymentPlan extends Model
     protected $fillable = [
         'lot_id',
         'service_id',
+        'currency',
         'total_amount',
         'number_of_installments',
         'start_date',

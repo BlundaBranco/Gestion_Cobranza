@@ -142,7 +142,7 @@
         
         <div class="mt-6 border-t border-gray-200 pt-6">
             <!-- Configuración Global -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"> 
                 <div>
                     <x-input-label for="service_id" value="Tipo de Servicio" />
                     <select name="service_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
@@ -151,6 +151,17 @@
                         @endforeach
                     </select>
                 </div>
+
+                {{-- CAMPO DE MONEDA AÑADIDO --}}
+                <div>
+                    <x-input-label for="currency" value="Moneda" />
+                    <select name="currency" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        <option value="MXN">Pesos (MXN)</option>
+                        <option value="USD">Dólares (USD)</option>
+                    </select>
+                </div>
+
+
                 <div>
                     <x-input-label for="total_amount" value="Precio Total del Lote ($)" />
                     <x-text-input id="total_amount" name="total_amount" type="number" step="0.01" class="mt-1 block w-full text-lg font-bold text-gray-900" x-model="total_amount" />
@@ -297,67 +308,57 @@
     <div class="mt-12 space-y-8">
         @forelse($lot->paymentPlans as $plan)
             @php
+                // BLOQUE DE CÁLCULO QUE FALTA
                 $totalInstallments = $plan->installments->count();
                 $paidInstallments = $plan->installments->filter(function($inst) {
                     $totalPaid = $inst->transactions->sum('pivot.amount_applied');
                     $totalDue = ($inst->amount ?? $inst->base_amount) + $inst->interest_amount;
-                    return ($totalDue - $totalPaid) <= 0.005;
+                    return ($totalDue - $totalPaid) <= 0.01;
                 })->count();
                 $progressPercentage = $totalInstallments > 0 ? ($paidInstallments / $totalInstallments) * 100 : 0;
             @endphp
-            
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
-                 {{-- Header del Plan --}}
-                <div class="bg-gray-50 p-5 border-b border-gray-200">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-blue-600 rounded-lg text-white shadow-md">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-xl text-gray-800">{{ $plan->service->name }}</h4>
-                                <span class="text-xs font-semibold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{{ $totalInstallments }} cuotas</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center gap-4">
-                            <div class="text-right">
-                                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Monto Total</p>
-                                <p class="text-2xl font-black text-gray-900">${{ number_format($plan->total_amount, 2) }}</p>
-                            </div>
+
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                {{-- Header del Plan con Formulario de Edición de Moneda --}}
+                <div class="bg-gray-50 p-4 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-lg text-gray-800">{{ $plan->service->name }}</h4>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">Total: {{ format_currency($plan->total_amount, $plan->currency) }}</span>
                             
-                            @can('forceDelete', $plan)
-                                <form action="{{ route('payment-plans.destroy', $plan) }}" method="POST" onsubmit="return confirm('ADMIN: ¿Seguro que deseas eliminar este plan? Esta acción es irreversible y borrará el historial de pagos.');">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors" title="Eliminar Plan">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </button>
-                                </form>
-                            @else
-                                 @if(!$plan->installments()->whereHas('transactions')->exists())
-                                    <form action="{{ route('payment-plans.destroy', $plan) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar este plan de pago?');">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors" title="Eliminar Plan">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                        </button>
-                                    </form>
-                                 @endif
-                            @endcan
+                            <form action="{{ route('payment-plans.updateCurrency', $plan) }}" method="POST" class="flex items-center gap-2">
+                                @csrf
+                                @method('PUT')
+                                <select name="currency" onchange="this.form.submit()" class="text-xs border-gray-300 rounded-md p-1 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    <option value="MXN" @selected($plan->currency == 'MXN')>MXN</option>
+                                    <option value="USD" @selected($plan->currency == 'USD')>USD</option>
+                                </select>
+                            </form>
                         </div>
                     </div>
                     
-                    <div class="space-y-2 mt-2">
-                        <div class="flex justify-between text-sm">
-                            <span class="font-semibold text-gray-600">Progreso de Pago</span>
-                            <span class="font-bold text-green-700">{{ number_format($progressPercentage, 0) }}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div class="bg-gradient-to-r from-green-400 to-green-600 h-2.5 rounded-full transition-all duration-500 shadow-sm" style="width: {{ $progressPercentage }}%"></div>
-                        </div>
-                        <div class="flex justify-between text-xs font-medium text-gray-500">
-                            <span><span class="text-gray-800 font-bold">{{ $paidInstallments }}</span> pagadas</span>
-                            <span><span class="text-gray-800 font-bold">{{ $totalInstallments - $paidInstallments }}</span> pendientes</span>
-                        </div>
+                    @can('delete', $plan)
+                        <form action="{{ route('payment-plans.destroy', $plan) }}" method="POST" onsubmit="return confirm('¿Seguro? Esta acción es irreversible si tiene pagos.');">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors" title="Eliminar Plan">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </form>
+                    @endcan
+                </div>
+                
+                {{-- Barra de Progreso --}}
+                <div class="p-4 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="font-semibold text-gray-600">Progreso de Pago</span>
+                        <span class="font-bold text-green-700">{{ number_format($progressPercentage, 0) }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div class="bg-gradient-to-r from-green-400 to-green-600 h-2.5 rounded-full transition-all duration-500 shadow-sm" style="width: {{ $progressPercentage }}%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs font-medium text-gray-500">
+                        <span><span class="text-gray-800 font-bold">{{ $paidInstallments }}</span> pagadas</span>
+                        <span><span class="text-gray-800 font-bold">{{ $totalInstallments - $paidInstallments }}</span> pendientes</span>
                     </div>
                 </div>
                 
@@ -367,13 +368,7 @@
             </div>
         @empty
             <div class="border-dashed border-2 border-gray-300 rounded-xl p-12 text-center bg-gray-50/50">
-                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-100">
-                    <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                </div>
-                <h3 class="text-lg font-bold text-gray-800">Sin Planes de Pago</h3>
-                <p class="text-gray-500 mt-1 text-sm">Utiliza el formulario superior para crear el primer plan de financiamiento.</p>
+                {{-- ... --}}
             </div>
         @endforelse
     </div>

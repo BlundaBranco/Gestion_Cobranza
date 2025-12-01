@@ -45,13 +45,12 @@ class PaymentPlanPolicy
      */
     public function delete(User $user, PaymentPlan $plan): bool
     {
-        // Si el usuario es admin, puede eliminar.
-        if ($user->isAdmin()) {
-            return true;
+        // Un usuario estándar puede eliminar si no tiene transacciones
+        if (!$user->isAdmin() && $plan->installments()->whereHas('transactions')->exists()) {
+            return false;
         }
-
-        // Si es un usuario normal, solo si no hay transacciones.
-        return !$plan->installments()->whereHas('transactions')->exists();
+        // Un admin siempre puede eliminar, o un user si no hay transacciones
+        return true;
     }
 
     /**

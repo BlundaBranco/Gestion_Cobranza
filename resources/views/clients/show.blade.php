@@ -81,17 +81,17 @@
                     <div class="flex items-start justify-between">
                         <div class="w-full mr-4">
                             <p class="text-sm font-medium text-red-100 mb-1">Deuda Total</p>
-                            <p class="text-3xl font-bold">${{ number_format($stats['total_debt'], 2) }}</p>
+                            <p class="text-3xl font-bold">{{ format_currency($stats['total_debt'], $plan->currency) }}</p>
                             
                             {{-- Desglose --}}
                             <div class="mt-3 pt-2 border-t border-white/20 text-xs font-medium opacity-90 space-y-1">
                                 <div class="flex justify-between">
                                     <span>Capital:</span>
-                                    <span>${{ number_format($stats['debt_capital'], 2) }}</span>
+                                    <span>{{ format_currency($stats['debt_capital'], $plan->currency) }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Interés:</span>
-                                    <span>${{ number_format($stats['debt_interest'], 2) }}</span>
+                                    <span>{{ format_currency($stats['debt_interest'], $plan->currency) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -123,17 +123,17 @@
                     <div class="flex items-start justify-between">
                         <div class="w-full mr-4">
                             <p class="text-sm font-medium text-green-100 mb-1">Total Pagado</p>
-                            <p class="text-3xl font-bold">${{ number_format($stats['total_paid'], 2) }}</p>
+                            <p class="text-3xl font-bold">{{ format_currency($stats['total_paid'], $plan->currency) }}</p>
 
                             {{-- Desglose --}}
                             <div class="mt-3 pt-2 border-t border-white/20 text-xs font-medium opacity-90 space-y-1">
                                 <div class="flex justify-between">
                                     <span>Capital:</span>
-                                    <span>${{ number_format($stats['paid_capital'], 2) }}</span>
+                                    <span>{{ format_currency($stats['paid_capital'], $plan->currency) }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Interés:</span>
-                                    <span>${{ number_format($stats['paid_interest'], 2) }}</span>
+                                    <span>{{ format_currency($stats['paid_interest'], $plan->currency) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -216,7 +216,7 @@
                             @forelse ($lot->paymentPlans as $plan)
                                 <div class="mt-4 first:mt-0">
                                     <div class="bg-gradient-to-r from-indigo-50 to-white rounded-lg p-4 mb-4 border border-indigo-100">
-                                        <h4 class="font-bold text-lg text-gray-800">{{ $plan->service->name }} <span class="text-indigo-600">- Total: ${{ number_format($plan->total_amount, 2) }}</span></h4>
+                                        <h4 class="font-bold text-lg text-gray-800">{{ $plan->service->name }} <span class="text-indigo-600">- Total: {{ format_currency($plan->total_amount, $plan->currency) }}</span></h4>
                                     </div>
                                     <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                                         <table class="w-full text-sm">
@@ -243,11 +243,11 @@
                                                     <tr class="hover:bg-indigo-50 transition-colors duration-150">
                                                         <td class="px-4 py-3 font-semibold text-gray-900">{{ $installment->installment_number }}</td>
                                                         <td class="px-4 py-3 text-gray-700">{{ $installment->due_date->format('d/m/Y') }}</td>
-                                                        <td class="px-4 py-3 font-medium text-gray-900">${{ number_format($installment->base_amount, 2) }}</td>
-                                                        <td class="px-4 py-3 font-medium text-yellow-600">${{ number_format($installment->interest_amount, 2) }}</td>
-                                                        <td class="px-4 py-3 font-bold text-gray-900">${{ number_format($totalDue, 2) }}</td>
-                                                        <td class="px-4 py-3 font-medium text-green-600">${{ number_format($totalPaid, 2) }}</td>
-                                                        <td class="px-4 py-3 font-bold {{ $remaining > 0.005 ? 'text-red-600' : 'text-green-600' }}">${{ number_format($remaining, 2) }}</td>
+                                                        <td class="px-4 py-3 font-medium text-gray-900">{{ format_currency($installment->base_amount, $plan->currency) }}</td>
+                                                        <td class="px-4 py-3 font-medium text-yellow-600">{{ format_currency($installment->interest_amount, $plan->currency) }}</td>
+                                                        <td class="px-4 py-3 font-bold text-gray-900">{{ format_currency($totalDue, $plan->currency) }}</td>
+                                                        <td class="px-4 py-3 font-medium text-green-600">{{ format_currency($totalPaid, $plan->currency) }}</td>
+                                                        <td class="px-4 py-3 font-bold {{ $remaining > 0.005 ? 'text-red-600' : 'text-green-600' }}">{{ format_currency($remaining, $plan->currency) }}</td>
                                                         <td class="px-4 py-3">
                                                             @php
                                                                 $statusClass = $remaining <= 0.005 ? 'bg-green-100 text-green-800 border-green-200' : ($installment->status == 'vencida' ? 'bg-red-100 text-red-800 border-red-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200');

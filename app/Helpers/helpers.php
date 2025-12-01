@@ -18,6 +18,18 @@ if (!function_exists('number_to_words_es')) {
     }
 }
 
+
+if (!function_exists('format_currency')) {
+    function format_currency(float $amount, ?string $currency = 'MXN'): string
+    {
+        // Si la moneda es nula o vacía, usar MXN por defecto
+        if (empty($currency)) {
+            $currency = 'MXN';
+        }
+        return '$' . number_format($amount, 2) . ' ' . strtoupper($currency);
+    }
+}
+
 if (!function_exists('generate_whatsapp_message')) {
     function generate_whatsapp_message(\App\Models\Installment $installment, float $remaining): string
     {

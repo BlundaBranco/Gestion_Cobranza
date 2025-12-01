@@ -83,6 +83,9 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/income', [ReportController::class, 'incomeReport'])->name('reports.income');
     Route::get('reports/overdue-installments', [ReportController::class, 'overdueInstallments'])->name('reports.overdue');
     Route::get('reports/income/export', [ReportController::class, 'export'])->name('reports.export');
+   
+    
+    Route::put('/payment-plans/{plan}/update-currency', [PaymentPlanController::class, 'updateCurrency'])->name('payment-plans.updateCurrency');
     
 });
 

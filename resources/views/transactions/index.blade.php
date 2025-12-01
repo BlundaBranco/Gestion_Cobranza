@@ -122,10 +122,13 @@
                                     <td class="px-6 py-4 text-gray-700 font-medium">
                                         {{ $transaction->payment_date->format('d/m/Y') }}
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <span class="inline-flex items-center px-3 py-1 rounded-lg bg-green-100 text-green-700 font-bold">
-                                            ${{ number_format($transaction->amount_paid, 2) }}
-                                        </span>
+                                    <td class="px-6 py-4 font-semibold text-green-600">
+                                        @php
+                                            // Obtener la moneda de la primera cuota si existe
+                                            $firstInstallment = $transaction->installments->first();
+                                            $currency = $transaction->installments->first()->paymentPlan->currency ?? 'MXN';
+                                        @endphp
+                                        {{ format_currency($transaction->amount_paid, $currency) }}
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
