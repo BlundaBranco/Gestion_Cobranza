@@ -42,7 +42,7 @@
             @if($lots->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     @foreach($lots as $lot)
-                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between overflow-hidden">
+                        <div class="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between overflow-hidden">
                             <div class="p-6">
                                 <div class="flex items-start justify-between mb-4">
                                     <div class="flex-1">
@@ -63,38 +63,32 @@
                                     </span>
                                 </div>
 
-                                @if($lot->total_debt > 0.01)
-                                    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-sm font-semibold text-red-900">Deuda Total</span>
-                                            <span class="text-lg font-bold text-red-600">
-                                                {{-- Obtener la moneda de forma segura --}}
-                                                @php
-                                                    $currencyForLotCard = $lot->payment_plans_summary->isNotEmpty() ? $lot->payment_plans_summary->first()['currency'] : 'MXN';
-                                                @endphp
-                                                {{ format_currency($lot->total_debt, $currencyForLotCard) }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                @else
-                                    @if($lot->payment_plans_summary->isNotEmpty())
-                                    <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <span class="text-sm font-semibold text-green-900">Sin deudas pendientes</span>
-                                        </div>
-                                    </div>
-                                    @endif
-                                @endif
-
+                                {{-- CORRECCIÓN: Mostrar deuda por cada plan, no un total combinado --}}
                                 <div class="pt-4 border-t border-gray-100 space-y-3">
-                                    @foreach($lot->payment_plans_summary as $summary)
+                                    @forelse($lot->paymentPlans as $plan)
+                                        @php
+                                            // Calcular la deuda de este plan específico
+                                            $planDebt = $plan->installments->reduce(function ($carry, $inst) {
+                                                $due = ($inst->amount ?? $inst->base_amount) + $inst->interest_amount;
+                                                $paid = $inst->transactions->sum('pivot.amount_applied');
+                                                return $carry + max(0, $due - $paid);
+                                            }, 0);
+                                        @endphp
                                         <div class="flex justify-between items-center text-sm">
-                                            <span class="text-gray-600">{{ $summary['service_name'] }}</span>
-                                            <span class="font-bold {{ $summary['debt'] > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                                {{ format_currency($summary['debt'], $summary['currency']) }}
-                                            </span>
+                                            <span class="text-gray-600">{{ $plan->service->name }}</span>
+                                            @if($planDebt > 0.01)
+                                                <span class="font-bold text-red-600">
+                                                    Debe: {{ format_currency($planDebt, $plan->currency) }}
+                                                </span>
+                                            @else
+                                                <span class="font-bold text-green-600">
+                                                    Saldado
+                                                </span>
+                                            @endif
                                         </div>
-                                    @endforeach
+                                    @empty
+                                        <p class="text-xs text-center text-gray-400 py-2">Sin planes de pago asignados.</p>
+                                    @endforelse
                                 </div>
                             </div>
                             

@@ -58,93 +58,84 @@
                 </div>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                
-                <!-- Lotes/Servicios -->
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-blue-100 mb-1">Lotes/Servicios</p>
-                            <p class="text-3xl font-bold">{{ $stats['servicesCount'] }}</p>
-                        </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
+        <!-- Stats Cards (Desglose por Moneda) -->
+        <div class="space-y-6">
+            @php
+                // Agrupar todos los planes del cliente por moneda
+                $plansByCurrency = $client->lots->flatMap->paymentPlans->groupBy('currency');
+            @endphp
 
-                <!-- Deuda Total (Desglosada) -->
-                <div class="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
-                    <div class="flex items-start justify-between">
-                        <div class="w-full mr-4">
-                            <p class="text-sm font-medium text-red-100 mb-1">Deuda Total</p>
-                            <p class="text-3xl font-bold">{{ format_currency($stats['total_debt'], $plan->currency) }}</p>
-                            
-                            {{-- Desglose --}}
-                            <div class="mt-3 pt-2 border-t border-white/20 text-xs font-medium opacity-90 space-y-1">
-                                <div class="flex justify-between">
-                                    <span>Capital:</span>
-                                    <span>{{ format_currency($stats['debt_capital'], $plan->currency) }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Interés:</span>
-                                    <span>{{ format_currency($stats['debt_interest'], $plan->currency) }}</span>
-                                </div>
+            @forelse ($plansByCurrency as $currency => $plans)
+                @php
+                    // Calcular estadísticas para ESTA moneda específica
+                    $data = [
+                        'total_debt' => 0, 'debt_capital' => 0, 'debt_interest' => 0,
+                        'total_paid' => 0, 'paid_capital' => 0, 'paid_interest' => 0,
+                        'pending_installments' => 0
+                    ];
+                    foreach ($plans->flatMap->installments as $installment) {
+                        $totalPaid = $installment->transactions->sum('pivot.amount_applied');
+                        $interest = $installment->interest_amount;
+                        $base = $installment->amount ?? $installment->base_amount;
+                        $totalDue = $base + $interest;
+                        $remaining = $totalDue - $totalPaid;
+
+                        if ($remaining > 0.01) {
+                            $data['pending_installments']++;
+                            $paidInterestOnDebt = min($totalPaid, $interest);
+                            $paidCapitalOnDebt = $totalPaid - $paidInterestOnDebt;
+                            $data['debt_interest'] += $interest - $paidInterestOnDebt;
+                            $data['debt_capital'] += $base - $paidCapitalOnDebt;
+                            $data['total_debt'] += $remaining;
+                        }
+
+                        $paidInterest = min($totalPaid, $interest);
+                        $paidCapital = $totalPaid - $paidInterest;
+                        $data['paid_interest'] += $paidInterest;
+                        $data['paid_capital'] += $paidCapital;
+                        $data['total_paid'] += $totalPaid;
+                    }
+                @endphp
+
+                {{-- Contenedor para las estadísticas de una moneda --}}
+                <div class="bg-white p-6 rounded-xl shadow-md border">
+                    <h3 class="font-bold text-xl text-gray-800 mb-4">Resumen en {{ $currency }}</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                        <!-- Deuda en esta moneda -->
+                        <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                            <p class="text-sm font-medium text-red-700">Deuda Pendiente</p>
+                            <p class="text-2xl font-bold text-red-600">{{ format_currency($data['total_debt'], $currency) }}</p>
+                            <div class="mt-2 text-xs text-gray-600 space-y-1">
+                                <div class="flex justify-between"><span>Capital:</span> <span class="font-semibold">${{ number_format($data['debt_capital'], 2) }}</span></div>
+                                <div class="flex justify-between"><span>Intereses:</span> <span class="font-semibold">${{ number_format($data['debt_interest'], 2) }}</span></div>
                             </div>
                         </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Cuotas Pendientes -->
-                <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-yellow-100 mb-1">Cuotas Pendientes</p>
-                            <p class="text-3xl font-bold">{{ $stats['pendingInstallmentsCount'] }}</p>
-                        </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Total Pagado (Desglosado) -->
-                <div class="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform duration-200">
-                    <div class="flex items-start justify-between">
-                        <div class="w-full mr-4">
-                            <p class="text-sm font-medium text-green-100 mb-1">Total Pagado</p>
-                            <p class="text-3xl font-bold">{{ format_currency($stats['total_paid'], $plan->currency) }}</p>
-
-                            {{-- Desglose --}}
-                            <div class="mt-3 pt-2 border-t border-white/20 text-xs font-medium opacity-90 space-y-1">
-                                <div class="flex justify-between">
-                                    <span>Capital:</span>
-                                    <span>{{ format_currency($stats['paid_capital'], $plan->currency) }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Interés:</span>
-                                    <span>{{ format_currency($stats['paid_interest'], $plan->currency) }}</span>
-                                </div>
+                        <!-- Pagado en esta moneda -->
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <p class="text-sm font-medium text-green-700">Total Pagado</p>
+                            <p class="text-2xl font-bold text-green-600">{{ format_currency($data['total_paid'], $currency) }}</p>
+                            <div class="mt-2 text-xs text-gray-600 space-y-1">
+                                <div class="flex justify-between"><span>A Capital:</span> <span class="font-semibold">${{ number_format($data['paid_capital'], 2) }}</span></div>
+                                <div class="flex justify-between"><span>A Intereses:</span> <span class="font-semibold">${{ number_format($data['paid_interest'], 2) }}</span></div>
                             </div>
                         </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
+
+                        <!-- Info General -->
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <p class="text-sm font-medium text-blue-700">Info General</p>
+                            <p class="text-2xl font-bold text-blue-600">{{ $data['pending_installments'] }}</p>
+                            <p class="mt-2 text-xs text-gray-600">Cuotas con saldo pendiente en {{ $currency }}</p>
                         </div>
                     </div>
                 </div>
-            </div>
+            @empty
+                <div class="bg-white p-6 rounded-xl shadow-md border text-center">
+                    <p class="text-gray-500">Este cliente no tiene historial financiero.</p>
+                </div>
+            @endforelse
+        </div>
 
             <!-- Tarjeta de Documentos del Cliente -->
             <div class="bg-white overflow-hidden shadow-lg sm:rounded-xl border border-gray-200">

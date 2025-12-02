@@ -12,7 +12,7 @@ class LotController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Lot::with(['client', 'owner']);
+        $query = Lot::with(['client', 'owner', 'paymentPlans.service']);
 
         if ($request->filled('search')) {
             $search = $request->search;

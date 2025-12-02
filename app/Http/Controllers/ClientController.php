@@ -54,74 +54,65 @@ class ClientController extends Controller
 
     public function show(\App\Models\Client $client)
     {
-        // Cargar todas las relaciones necesarias
+        // Cargar todas las relaciones necesarias de una sola vez
         $client->load([
             'lots.paymentPlans.service',
             'lots.paymentPlans.installments.transactions',
-            'transactions',
             'documents'
         ]);
+        
+        // El array ahora almacenará los totales por cada moneda encontrada
+        $statsByCurrency = [];
+        $pendingInstallmentsCount = 0;
+        
+        foreach ($client->lots->flatMap->paymentPlans as $plan) {
+            $currency = $plan->currency;
 
-        // Inicializar el array de estadísticas con el desglose
-        $stats = [
-            'servicesCount' => $client->lots->count(),
-            'pendingInstallmentsCount' => 0,
-            
-            // Desglose de Deuda
-            'debt_capital' => 0,
-            'debt_interest' => 0,
-            'total_debt' => 0,
+            // Inicializar el sub-array para esta moneda si es la primera vez que la vemos
+            if (!isset($statsByCurrency[$currency])) {
+                $statsByCurrency[$currency] = [
+                    'total_debt' => 0,
+                    'debt_capital' => 0,
+                    'debt_interest' => 0,
+                    'total_paid' => 0,
+                    'paid_capital' => 0,
+                    'paid_interest' => 0,
+                ];
+            }
 
-            // Desglose de Pagado
-            'paid_capital' => 0,
-            'paid_interest' => 0,
-            'total_paid' => 0,
-        ];
+            foreach ($plan->installments as $installment) {
+                $totalPaidForInstallment = $installment->transactions->sum('pivot.amount_applied');
+                $interestAmount = $installment->interest_amount;
+                $baseAmount = $installment->amount ?? $installment->base_amount;
+                $totalAmount = $baseAmount + $interestAmount;
+                
+                $remainingTotal = $totalAmount - $totalPaidForInstallment;
 
-        foreach ($client->lots as $lot) {
-            foreach ($lot->paymentPlans as $plan) {
-                foreach ($plan->installments as $installment) {
-                    // 1. Obtener valores base
-                    $totalPaidForInstallment = $installment->transactions->sum('pivot.amount_applied');
-                    $interestAmount = $installment->interest_amount;
-                    // Usar el campo editable 'amount' si existe, si no, el original 'base_amount'
-                    $baseAmount = $installment->amount ?? $installment->base_amount;
-                    $totalAmount = $baseAmount + $interestAmount;
+                // Calcular desglose de lo pagado
+                $paidInterest = min($totalPaidForInstallment, $interestAmount);
+                $paidCapital = $totalPaidForInstallment - $paidInterest;
 
-                    // 2. Calcular desglose de LO PAGADO
-                    // Asumimos que el pago cubre primero el interés y luego el capital
-                    $paidInterest = min($totalPaidForInstallment, $interestAmount);
-                    $paidCapital = $totalPaidForInstallment - $paidInterest;
+                // Acumular totales pagados
+                $statsByCurrency[$currency]['total_paid'] += $totalPaidForInstallment;
+                $statsByCurrency[$currency]['paid_capital'] += $paidCapital;
+                $statsByCurrency[$currency]['paid_interest'] += $paidInterest;
 
-                    // 3. Calcular desglose de LA DEUDA
-                    $remainingTotal = $totalAmount - $totalPaidForInstallment;
+                // Acumular deuda si existe
+                if ($remainingTotal > 0.01) {
+                    $pendingInstallmentsCount++;
                     
-                    if ($remainingTotal > 0.005) {
-                        $stats['pendingInstallmentsCount']++;
-                        
-                        // Lo que falta de interés es el total de interés menos lo que ya se cubrió
-                        $remainingInterest = $interestAmount - $paidInterest;
-                        // Lo que falta de capital es el total de capital menos lo que ya se cubrió
-                        $remainingCapital = $baseAmount - $paidCapital;
-
-                        // Asegurarse de no sumar negativos por errores de redondeo
-                        $stats['debt_interest'] += max(0, $remainingInterest);
-                        $stats['debt_capital'] += max(0, $remainingCapital);
-                        $stats['total_debt'] += $remainingTotal;
-                    }
-
-                    // 4. Acumular totales pagados en las estadísticas generales
-                    $stats['paid_interest'] += $paidInterest;
-                    $stats['paid_capital'] += $paidCapital;
-                    $stats['total_paid'] += $totalPaidForInstallment;
+                    $remainingInterest = $interestAmount - $paidInterest;
+                    $remainingCapital = $baseAmount - $paidCapital;
+                    
+                    $statsByCurrency[$currency]['total_debt'] += $remainingTotal;
+                    $statsByCurrency[$currency]['debt_capital'] += max(0, $remainingCapital);
+                    $statsByCurrency[$currency]['debt_interest'] += max(0, $remainingInterest);
                 }
             }
         }
-
-        // Obtener transacciones recientes para la vista
-        $recentTransactions = $client->transactions()->latest()->take(5)->get();
-
-        return view('clients.show', compact('client', 'stats', 'recentTransactions'));
+        
+        // Pasar a la vista los datos del cliente, el conteo de cuotas y los totales agrupados por moneda
+        return view('clients.show', compact('client', 'pendingInstallmentsCount', 'statsByCurrency'));
     }
     
     public function edit(Client $client)
