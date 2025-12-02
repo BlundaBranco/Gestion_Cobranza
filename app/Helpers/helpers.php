@@ -6,15 +6,17 @@ if (!function_exists('number_to_words_es')) {
     function number_to_words_es(float $number): string
     {
         $numberToWords = new NumberToWords();
-        $transformer = $numberToWords->getNumberTransformer('es');
+        // CORRECCIÓN: El método correcto es getConverter()
+        $converter = $numberToWords->getConverter('es');
 
         $integerPart = intval($number);
         $decimalPart = round(($number - $integerPart) * 100);
 
-        $words = $transformer->toWords($integerPart);
+        $words = $converter->toWords($integerPart);
         $formattedDecimal = str_pad($decimalPart, 2, '0', STR_PAD_LEFT);
 
-        return ucfirst($words) . ' pesos ' . $formattedDecimal . '/100 M.N.';
+        // Se elimina "M.N." para evitar redundancia con la moneda que se añade después
+        return ucfirst($words) . ' pesos ' . $formattedDecimal . '/100';
     }
 }
 
