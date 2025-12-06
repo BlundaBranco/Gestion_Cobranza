@@ -13,33 +13,49 @@ class ReportController extends Controller
 {
     public function incomeReport(Request $request)
     {
-        // Establecer fechas por defecto si no se proporcionan
+        // Obtener todos los parámetros del request, con valores por defecto
         $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
-        $ownerId = $request->input('owner_id'); // Obtener el ID del socio del request
+        $ownerId = $request->input('owner_id');
+        $folioSearch = $request->input('folio_search');
 
-        // Iniciar la consulta de transacciones
-        $query = Transaction::with(['client', 'installments.paymentPlan.lot']); // Precargar relaciones necesarias
+        // Iniciar la consulta con las relaciones necesarias
+        $query = Transaction::with(['client', 'installments.paymentPlan.lot.owner']);
 
-        // Filtrar por rango de fechas
-        $query->whereBetween('payment_date', [$startDate, $endDate]);
+        // Aplicar filtros solo si los valores están presentes
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('payment_date', [$startDate, $endDate]);
+        }
 
-        // Filtrar por socio si se proporcionó un ID
         if ($ownerId) {
             $query->whereHas('installments.paymentPlan.lot', function ($q) use ($ownerId) {
                 $q->where('owner_id', $ownerId);
             });
         }
+        
+        // Nuevo filtro por número de folio
+        if ($folioSearch) {
+            $query->where('folio_number', 'like', '%' . $folioSearch . '%');
+        }
 
-        // Obtener las transacciones y calcular el total
-        $transactions = $query->orderBy('payment_date', 'desc')->get();
+        // Ejecutar la consulta
+        $transactions = $query->latest('payment_date')->get();
         $totalIncome = $transactions->sum('amount_paid');
         
-        // Obtener la lista de socios para el filtro
-        $owners = Owner::orderBy('name')->get();
+        // Obtener los socios para el desplegable
+        $owners = \App\Models\Owner::orderBy('name')->get();
 
         // Pasar todas las variables a la vista
-        return view('reports.income', compact('transactions', 'totalIncome', 'startDate', 'endDate', 'owners', 'ownerId'));
+        return view('reports.income', [
+            'transactions' => $transactions,
+            'totalIncome' => $totalIncome,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'owners' => $owners,
+            // Pasar de vuelta los valores seleccionados para mantenerlos en el formulario
+            'selectedOwner' => $ownerId, 
+            'folioSearch' => $folioSearch,
+        ]);
     }
 
     public function overdueInstallments()
