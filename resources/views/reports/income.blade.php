@@ -27,22 +27,33 @@
                     </div>
                 </div>
                 <form method="GET" action="{{ route('reports.income') }}" class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
+                    {{-- Se ajustó a 6 columnas para acomodar el rango de folios --}}
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+                        
+                        {{-- Fechas --}}
                         <div>
-                            <x-input-label for="start_date" value="Fecha de Inicio" />
-                            <x-text-input id="start_date" name="start_date" type="date" class="mt-1 block w-full" :value="$startDate" />
+                            <x-input-label for="start_date" value="Fecha Inicio" />
+                            <x-text-input id="start_date" name="start_date" type="date" class="mt-1 block w-full text-sm" :value="$startDate" />
                         </div>
                         <div>
-                            <x-input-label for="end_date" value="Fecha de Fin" />
-                            <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full" :value="$endDate" />
+                            <x-input-label for="end_date" value="Fecha Fin" />
+                            <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full text-sm" :value="$endDate" />
                         </div>
-                        <div class="lg:col-span-1">
-                            <x-input-label for="folio_search" value="Buscar por Folio" />
-                            <x-text-input id="folio_search" name="folio_search" type="text" class="mt-1 block w-full" :value="request('folio_search')" />
+
+                        {{-- Rango de Folios (NUEVO) --}}
+                        <div>
+                            <x-input-label for="folio_from" value="Folio Desde" />
+                            <x-text-input id="folio_from" name="folio_from" type="number" class="mt-1 block w-full text-sm" placeholder="Ej: 1" :value="request('folio_from')" />
                         </div>
+                        <div>
+                            <x-input-label for="folio_to" value="Folio Hasta" />
+                            <x-text-input id="folio_to" name="folio_to" type="number" class="mt-1 block w-full text-sm" placeholder="Ej: 100" :value="request('folio_to')" />
+                        </div>
+
+                        {{-- Socio --}}
                         <div>
                             <x-input-label for="owner_id" value="Socio" />
-                            <select id="owner_id" name="owner_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <select id="owner_id" name="owner_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
                                 <option value="">Todos los Socios</option>
                                 @foreach($owners as $owner)
                                     <option value="{{ $owner->id }}" @selected(request('owner_id') == $owner->id)>
@@ -51,12 +62,17 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="flex gap-2">
-                            <x-primary-button class="w-full justify-center">Filtrar</x-primary-button>
+
+                        {{-- Botón Filtrar --}}
+                        <div>
+                            <x-primary-button class="w-full justify-center h-[42px]">Filtrar</x-primary-button>
                         </div>
                     </div>
-                    <div class="mt-4 flex justify-end">
-                        <a href="{{ route('reports.export', request()->query()) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500">
+
+                    {{-- Botón Exportar --}}
+                    <div class="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                        <a href="{{ route('reports.export', request()->query()) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500 transition shadow-sm">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                             Exportar Excel
                         </a>
                     </div>
@@ -128,4 +144,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-app-layout>R
