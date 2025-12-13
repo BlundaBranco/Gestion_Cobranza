@@ -77,6 +77,7 @@
             <div class="header-col company-details" style="width: 55%;">
                 COL. LOMAS DEL PACIFICO<br>
                 Tel. Oficina: 664-383-1246<br>
+                Tel. Celular: 663-439-3311<br>
                 Col. Roberto Yahuaca, Calle Brisas del Mar<br>
                 L-13 Mz-7 C.P. 22545 Tijuana, B.C.
             </div>
