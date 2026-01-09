@@ -37,8 +37,13 @@
                             <p class="text-base font-bold text-gray-900">{{ $client->name }}</p>
                         </div>
                         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Teléfono</p>
-                            <p class="text-base font-bold text-gray-900">{{ $client->phone ?? 'No registrado' }}</p>
+                            <p class="text-gray-500">Teléfono</p>
+                            <p class="font-semibold text-gray-800">
+                                {{ $client->phone ?? 'No registrado' }}
+                                @if($client->phone_label)
+                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full ml-2">{{ $client->phone_label }}</span>
+                                @endif
+                            </p>
                         </div>
                         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email</p>
@@ -218,7 +223,7 @@
                                                     <th class="px-4 py-3 text-left font-semibold">Monto Base</th>
                                                     <th class="px-4 py-3 text-left font-semibold">Intereses</th>
                                                     <th class="px-4 py-3 text-left font-semibold">Total</th>
-                                                    <th class="px-4 py-3 text-left font-semibold">Pagado</th>
+                                                    <th class="px-4 py-3 text-left font-semibold">Pagado / Fechas</th> {{-- Columna combinada --}}
                                                     <th class="px-4 py-3 text-left font-semibold">Adeudo</th>
                                                     <th class="px-4 py-3 text-left font-semibold">Estado</th>
                                                     <th class="px-4 py-3 text-right font-semibold">Acciones</th>
@@ -227,18 +232,65 @@
                                             <tbody class="divide-y divide-gray-200 bg-white">
                                                 @foreach ($plan->installments->sortBy('installment_number') as $installment)
                                                     @php
-                                                        $totalDue = $installment->base_amount + $installment->interest_amount;
+                                                        $totalDue = ($installment->amount ?? $installment->base_amount) + $installment->interest_amount;
                                                         $totalPaid = $installment->transactions->sum('pivot.amount_applied');
                                                         $remaining = $totalDue - $totalPaid;
                                                     @endphp
-                                                    <tr class="hover:bg-indigo-50 transition-colors duration-150">
+                                                    <tr class="hover:bg-indigo-50 transition-colors duration-150 group">
+                                                        {{-- 1. Numero --}}
                                                         <td class="px-4 py-3 font-semibold text-gray-900">{{ $installment->installment_number }}</td>
+                                                        
+                                                        {{-- 2. Vencimiento --}}
                                                         <td class="px-4 py-3 text-gray-700">{{ $installment->due_date->format('d/m/Y') }}</td>
-                                                        <td class="px-4 py-3 font-medium text-gray-900">{{ format_currency($installment->base_amount, $plan->currency) }}</td>
-                                                        <td class="px-4 py-3 font-medium text-yellow-600">{{ format_currency($installment->interest_amount, $plan->currency) }}</td>
+                                                        
+                                                        {{-- 3. Monto Base --}}
+                                                        <td class="px-4 py-3 font-medium text-gray-900">{{ format_currency($installment->amount ?? $installment->base_amount, $plan->currency) }}</td>
+                                                        
+                                                        {{-- 4. Intereses (Con botón de edición rápida) --}}
+                                                        <td class="px-4 py-3 font-medium text-yellow-600 relative" x-data="{ open: false }">
+                                                            <div class="flex items-center gap-1">
+                                                                <span>{{ format_currency($installment->interest_amount, $plan->currency) }}</span>
+                                                                {{-- Botón discreto para editar interés --}}
+                                                                <button @click="open = !open" class="text-xs text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Editar Interés">
+                                                                    <i class="fas fa-pencil-alt"></i>
+                                                                </button>
+                                                            </div>
+                                                            
+                                                            {{-- Popover para editar interés --}}
+                                                            <div x-show="open" @click.outside="open = false" class="absolute left-0 top-full mt-1 bg-white border border-gray-200 shadow-lg p-2 rounded-md z-10 w-48" style="display: none;">
+                                                                <form action="{{ route('installments.update-interest', $installment) }}" method="POST">
+                                                                    @csrf @method('PUT')
+                                                                    <label class="block text-xs font-bold text-gray-600 mb-1">Ajustar Interés:</label>
+                                                                    <div class="flex gap-1">
+                                                                        <input type="number" step="0.01" name="interest_amount" value="{{ $installment->interest_amount }}" class="w-full text-xs border-gray-300 rounded p-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                                                        <button type="submit" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700">OK</button>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </td>
+
+                                                        {{-- 5. Total Cuota --}}
                                                         <td class="px-4 py-3 font-bold text-gray-900">{{ format_currency($totalDue, $plan->currency) }}</td>
-                                                        <td class="px-4 py-3 font-medium text-green-600">{{ format_currency($totalPaid, $plan->currency) }}</td>
+                                                        
+                                                        {{-- 6. Pagado / Fechas (Corrección: Listar todos los pagos) --}}
+                                                        <td class="px-4 py-3">
+                                                            <div class="font-medium text-green-600">{{ format_currency($totalPaid, $plan->currency) }}</div>
+                                                            @if($installment->transactions->count() > 0)
+                                                                <div class="text-xs text-gray-500 mt-1 space-y-1">
+                                                                    @foreach($installment->transactions as $tx)
+                                                                        <div class="flex items-center gap-1">
+                                                                            <i class="fas fa-calendar-check text-gray-400 text-[10px]"></i>
+                                                                            <span>{{ $tx->payment_date->format('d/m/Y') }}</span>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+                                                            @endif
+                                                        </td>
+
+                                                        {{-- 7. Adeudo --}}
                                                         <td class="px-4 py-3 font-bold {{ $remaining > 0.005 ? 'text-red-600' : 'text-green-600' }}">{{ format_currency($remaining, $plan->currency) }}</td>
+                                                        
+                                                        {{-- 8. Estado --}}
                                                         <td class="px-4 py-3">
                                                             @php
                                                                 $statusClass = $remaining <= 0.005 ? 'bg-green-100 text-green-800 border-green-200' : ($installment->status == 'vencida' ? 'bg-red-100 text-red-800 border-red-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200');
@@ -247,26 +299,33 @@
                                                                 {{ $remaining <= 0.005 ? 'Pagada' : ucfirst($installment->status) }}
                                                             </span>
                                                         </td>
+
+                                                        {{-- 9. Acciones --}}
                                                         <td class="px-4 py-3 text-right">
-                                                            <div class="flex items-center justify-end gap-2">
-                                                                @if ($installment->interest_amount > 0)
-                                                                    <form action="{{ route('installments.condone', $installment) }}" method="POST" class="inline-block" onsubmit="return confirm('¿Seguro?');">
-                                                                        @csrf
-                                                                        <button type="submit" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 transition-colors">
-                                                                            Condonar
-                                                                        </button>
-                                                                    </form>
-                                                                @endif
+                                                            <div class="flex flex-col items-end gap-2">
+                                                                
+                                                                {{-- Links a los Folios (Corrección: Mostrar todos) --}}
+                                                                @foreach($installment->transactions as $tx)
+                                                                    <a href="{{ route('transactions.pdf', $tx) }}" target="_blank" class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors" title="Ver Recibo #{{ $tx->folio_number }}">
+                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                                        {{ $tx->folio_number }}
+                                                                    </a>
+                                                                @endforeach
+
+                                                                {{-- Botones de Acción para saldo pendiente --}}
                                                                 @if($remaining > 0.005)
-                                                                    <a href="{{ generate_whatsapp_message($installment, $remaining) }}" target="_blank" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-md border border-green-200 transition-colors">
-                                                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                                                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                                                                        </svg>
-                                                                        Notificar
-                                                                    </a>
-                                                                    <a href="{{ route('transactions.create', ['client_id' => $client->id, 'installment_id' => $installment->id]) }}" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors">
-                                                                        Pagar
-                                                                    </a>
+                                                                    <div class="flex items-center gap-2 mt-1">
+                                                                        {{-- WhatsApp --}}
+                                                                        @if($client->phone)
+                                                                            <a href="{{ generate_whatsapp_message($installment, $remaining) }}" target="_blank" class="text-green-500 hover:text-green-700" title="Enviar WhatsApp">
+                                                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                                                                            </a>
+                                                                        @endif
+                                                                        {{-- Pagar --}}
+                                                                        <a href="{{ route('transactions.create', ['client_id' => $client->id, 'installment_id' => $installment->id]) }}" class="inline-flex items-center px-2 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors">
+                                                                            Pagar
+                                                                        </a>
+                                                                    </div>
                                                                 @endif
                                                             </div>
                                                         </td>

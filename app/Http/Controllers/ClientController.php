@@ -43,6 +43,7 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255|unique:clients,email',
             'phone' => 'nullable|string|max:20',
+            'phone_label' => 'nullable|string|max:50',
             'address' => 'nullable|string',
         ]);
 
@@ -126,6 +127,7 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255|unique:clients,email,' . $client->id,
             'phone' => 'nullable|string|max:20',
+            'phone_label' => 'nullable|string|max:50',
             'address' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
