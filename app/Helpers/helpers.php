@@ -110,7 +110,7 @@ if (!function_exists('generate_whatsapp_message')) {
         if (!$client || !$client->phone) return '#';
 
         $statusMessage = $installment->status === 'vencida' ? "se encuentra VENCIDA" : "está PENDIENTE de pago";
-        $message = "Hola {$client->name}, le recordamos que la cuota nro {$installment->installment_number} del lote {$lot->identifier}, con vencimiento el {$installment->due_date->format('d/m/Y')}, {$statusMessage} con un adeudo de " . number_format($remaining, 2) . " pesos.";
+        $message = "Hola {$client->name}, le recordamos que la cuota nro {$installment->installment_number} del lote {$lot->identifier}, con vencimiento el {$installment->due_date->format('d/m/Y')}, {$statusMessage} con un adeudo de " . number_format($remaining, 2) . " pesos..\n\n¿Podrías confirmarme qué día de la semana estarías pasando a realizar tu pago pendiente?";
         
         $phoneNumber = preg_replace('/[^0-9]/', '', $client->phone);
         if (strlen($phoneNumber) == 10) $phoneNumber = '52' . $phoneNumber;
