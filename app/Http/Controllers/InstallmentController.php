@@ -31,6 +31,33 @@ class InstallmentController extends Controller
             return back()->with('success', 'Cuota actualizada correctamente.');
         }
 
+    public function updateInterest(Request $request, Installment $installment)
+    {
+        $validated = $request->validate([
+            'interest_amount' => 'required|numeric|min:0'
+        ]);
+
+        $installment->update(['interest_amount' => $validated['interest_amount']]);
+        
+        // Recalcular estados por si el cambio de interés afecta el saldo total
+        \Illuminate\Support\Facades\Artisan::call('installments:update-status');
+
+        return back()->with('success', 'Interés actualizado correctamente.');
+    }
+
+    public function bulkCondone(Request $request)
+    {
+        $validated = $request->validate([
+            'selected_installments' => 'required|array',
+            'selected_installments.*' => 'exists:installments,id'
+        ]);
+
+        Installment::whereIn('id', $validated['selected_installments'])
+            ->update(['interest_amount' => 0]);
+
+        return back()->with('success', 'Intereses condonados para las cuotas seleccionadas.');
+    }
+
     public function store(Request $request, \App\Models\PaymentPlan $plan)
         {
             $validated = $request->validate([
