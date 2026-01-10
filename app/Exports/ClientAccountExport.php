@@ -16,13 +16,24 @@ class ClientAccountExport implements FromView, ShouldAutoSize
         $this->client = $client;
     }
 
-    public function view(): View
+    public function view(): \Illuminate\Contracts\View\View
     {
-        // Reutilizamos la vista show pero optimizada para excel si es necesario,
-        // o creamos una vista simple solo con las tablas.
-        // Para rapidez, usaremos una vista nueva simplificada.
+        // Cargar relaciones aquí
+        $this->client->load([
+            'lots.paymentPlans.service',
+            'lots.paymentPlans.installments.transactions',
+        ]);
+
+        // Calcular Estadísticas (misma lógica que en ClientController)
+        $stats = [
+            'debt_capital' => 0, 'debt_interest' => 0, 'total_debt' => 0,
+            'paid_capital' => 0, 'paid_interest' => 0, 'total_paid' => 0,
+        ];
+        // ... (Pega aquí la lógica de cálculo de stats del ClientController)
+
         return view('exports.client-account', [
-            'client' => $this->client
+            'client' => $this->client,
+            'stats' => $stats // Pasar las stats a la vista de exportación
         ]);
     }
 }
