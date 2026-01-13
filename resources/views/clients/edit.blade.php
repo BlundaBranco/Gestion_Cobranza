@@ -96,6 +96,11 @@
                                 <x-input-error :messages="$errors->get('phone_label')" class="mt-2" />
                             </div>
 
+                            <div class="mt-4">
+                                <x-input-label for="additional_phones" value="Otros Teléfonos / Contactos Adicionales" />
+                                <textarea id="additional_phones" name="additional_phones" rows="2" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm" placeholder="Ej: Casa: 664-111-222, Esposo: 664-333-444">{{ old('additional_phones', $client->additional_phones ?? '') }}</textarea>
+                            </div>
+
                             <!-- Address -->
                             <div class="md:col-span-2">
                                 <x-input-label for="address" value="Dirección" class="font-semibold" />
