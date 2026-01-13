@@ -45,6 +45,8 @@ class ClientController extends Controller
             'phone' => 'nullable|string|max:20',
             'phone_label' => 'nullable|string|max:50',
             'address' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'additional_phones' => 'nullable|string|max:500',
         ]);
 
         Client::create($validated);
@@ -130,6 +132,7 @@ class ClientController extends Controller
             'phone_label' => 'nullable|string|max:50',
             'address' => 'nullable|string',
             'notes' => 'nullable|string',
+            'additional_phones' => 'nullable|string|max:500',
         ]);
 
         // Usar update() directamente con los datos validados asegura que se guarden todos los campos.

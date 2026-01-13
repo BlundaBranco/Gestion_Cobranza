@@ -11,7 +11,8 @@
             <!-- Tarjeta de Información del Cliente -->
             <div class="bg-gradient-to-br from-indigo-50 to-white overflow-hidden shadow-lg sm:rounded-xl border border-indigo-100">
                 <div class="p-8">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        {{-- Título y Avatar --}}
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-md">
                                 {{ strtoupper(substr($client->name, 0, 1)) }}
@@ -20,31 +21,46 @@
                                 Información del Cliente
                             </h3>
                         </div>
-                        {{-- NUEVO BOTÓN EXPORTAR --}}
-                        <a href="{{ route('clients.export', $client) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500">
-                            Exportar Excel
-                        </a>
-                        <a href="{{ route('clients.edit', $client) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-200 shadow-sm">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                            </svg>
-                            Editar Cliente
-                        </a>
+
+                        {{-- Botones de Acción --}}
+                        <div class="flex gap-3">
+                            <a href="{{ route('clients.export', $client) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-green-500 transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                Exportar Excel
+                            </a>
+                            <a href="{{ route('clients.edit', $client) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-200 shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                Editar Cliente
+                            </a>
+                        </div>
                     </div>
+
+                    {{-- Grid de Datos --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nombre Completo</p>
                             <p class="text-base font-bold text-gray-900">{{ $client->name }}</p>
                         </div>
                         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                            <p class="text-gray-500">Teléfono</p>
-                            <p class="font-semibold text-gray-800">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Teléfono Principal</p>
+                            <p class="text-base font-bold text-gray-800">
                                 {{ $client->phone ?? 'No registrado' }}
                                 @if($client->phone_label)
                                     <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full ml-2">{{ $client->phone_label }}</span>
                                 @endif
                             </p>
                         </div>
+
+                        {{-- CAMPO NUEVO: Teléfonos Adicionales --}}
+                        @if($client->additional_phones)
+                            <div class="md:col-span-2 bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Otros Contactos</p>
+                                <p class="text-base font-medium text-gray-800 whitespace-pre-line">{{ $client->additional_phones }}</p>
+                            </div>
+                        @endif
+
                         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email</p>
                             <p class="text-base font-bold text-gray-900">{{ $client->email ?? 'No registrado' }}</p>
@@ -53,6 +69,7 @@
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Dirección</p>
                             <p class="text-base font-bold text-gray-900">{{ $client->address ?? 'No registrada' }}</p>
                         </div>
+
                         @if($client->notes)
                         <div class="md:col-span-2 bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Notas</p>
