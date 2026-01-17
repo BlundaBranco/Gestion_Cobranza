@@ -93,8 +93,14 @@
                         </div>
                         <div class="text-left md:text-right">
                             <p class="text-sm text-gray-600 mb-1 font-medium">Total Ingresado</p>
-                            <div class="flex items-center gap-2 md:justify-end">
-                                <p class="text-3xl font-bold text-green-600">${{ number_format($totalIncome, 2) }}</p>
+                            <div class="flex flex-col gap-1 md:items-end">
+                                @forelse($incomeByCurrency as $currency => $amount)
+                                    <p class="text-3xl font-bold text-green-600">
+                                        {{ format_currency($amount, $currency) }}
+                                    </p>
+                                @empty
+                                    <p class="text-3xl font-bold text-green-600">$0.00</p>
+                                @endforelse
                             </div>
                         </div>
                     </div>
