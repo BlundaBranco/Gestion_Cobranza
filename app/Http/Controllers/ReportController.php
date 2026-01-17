@@ -56,18 +56,29 @@ class ReportController extends Controller
             });
         }
 
-        $transactions = $query->orderBy('payment_date', 'desc')->get();
-        $totalIncome = $transactions->sum('amount_paid');
+$transactions = $query->orderBy('payment_date', 'desc')->get();
+
+        // --- CORRECCIÓN: Agrupar totales por moneda ---
+        $incomeByCurrency = $transactions->groupBy(function ($tr) {
+            // Obtenemos la moneda del plan de pago asociado a la primera cuota
+            // Si no tiene, asumimos MXN
+            return $tr->installments->first()->paymentPlan->currency ?? 'MXN';
+        })->map(function ($group) {
+            return $group->sum('amount_paid');
+        });
+        // ----------------------------------------------
         
         $owners = \App\Models\Owner::orderBy('name')->get();
 
         return view('reports.income', [
             'transactions' => $transactions,
-            'totalIncome' => $totalIncome,
+            // 'totalIncome' => $totalIncome, // <-- ESTA VARIABLE SE ELIMINA
+            'incomeByCurrency' => $incomeByCurrency, // <-- SE ENVÍA ESTA NUEVA
             'startDate' => $startDate,
             'endDate' => $endDate,
             'owners' => $owners,
-            'selectedOwner' => $ownerId,
+            'folio_search' => $request->input('folio_search'), // Asegúrate de pasar esto si usas el filtro
+            'selectedOwner' => $request->input('owner_id'),
         ]);
     }
 
