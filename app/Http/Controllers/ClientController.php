@@ -57,21 +57,18 @@ class ClientController extends Controller
 
     public function show(\App\Models\Client $client)
     {
-        // Cargar todas las relaciones necesarias de una sola vez
         $client->load([
             'lots.paymentPlans.service',
             'lots.paymentPlans.installments.transactions',
             'documents'
         ]);
         
-        // El array ahora almacenará los totales por cada moneda encontrada
         $statsByCurrency = [];
         $pendingInstallmentsCount = 0;
         
         foreach ($client->lots->flatMap->paymentPlans as $plan) {
             $currency = $plan->currency;
 
-            // Inicializar el sub-array para esta moneda si es la primera vez que la vemos
             if (!isset($statsByCurrency[$currency])) {
                 $statsByCurrency[$currency] = [
                     'total_debt' => 0,
@@ -80,6 +77,7 @@ class ClientController extends Controller
                     'total_paid' => 0,
                     'paid_capital' => 0,
                     'paid_interest' => 0,
+                    'months_overdue' => 0, // <-- NUEVO: Contador de meses en mora
                 ];
             }
 
@@ -91,16 +89,13 @@ class ClientController extends Controller
                 
                 $remainingTotal = $totalAmount - $totalPaidForInstallment;
 
-                // Calcular desglose de lo pagado
                 $paidInterest = min($totalPaidForInstallment, $interestAmount);
                 $paidCapital = $totalPaidForInstallment - $paidInterest;
 
-                // Acumular totales pagados
                 $statsByCurrency[$currency]['total_paid'] += $totalPaidForInstallment;
                 $statsByCurrency[$currency]['paid_capital'] += $paidCapital;
                 $statsByCurrency[$currency]['paid_interest'] += $paidInterest;
 
-                // Acumular deuda si existe
                 if ($remainingTotal > 0.01) {
                     $pendingInstallmentsCount++;
                     
@@ -110,13 +105,18 @@ class ClientController extends Controller
                     $statsByCurrency[$currency]['total_debt'] += $remainingTotal;
                     $statsByCurrency[$currency]['debt_capital'] += max(0, $remainingCapital);
                     $statsByCurrency[$currency]['debt_interest'] += max(0, $remainingInterest);
+
+                    // NUEVO: Si la cuota está vencida y tiene saldo, sumar al contador de meses
+                    if ($installment->status === 'vencida') {
+                        $statsByCurrency[$currency]['months_overdue']++;
+                    }
                 }
             }
         }
         
-        // Pasar a la vista los datos del cliente, el conteo de cuotas y los totales agrupados por moneda
         return view('clients.show', compact('client', 'pendingInstallmentsCount', 'statsByCurrency'));
     }
+
     
     public function edit(Client $client)
     {

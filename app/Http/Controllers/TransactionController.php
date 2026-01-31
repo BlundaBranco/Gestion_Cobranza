@@ -104,9 +104,9 @@ class TransactionController extends Controller
         }, 0);
         // --- FIN DE ACTUALIZACIÓN ---
 
-        if ($amountPaid > round($totalDueForSelected, 2) + 0.001) {
-            throw ValidationException::withMessages([
-                'amount_paid' => 'El monto a pagar no puede ser mayor que el adeudo de las cuotas seleccionadas (Total: $' . number_format($totalDueForSelected, 2) . ').'
+        if ($amountPaid > (round($totalDueForSelected, 2) + 0.05)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'amount_paid' => 'El monto ingresado ($' . number_format($amountPaid, 2) . ') excede el adeudo total de las cuotas seleccionadas ($' . number_format($totalDueForSelected, 2) . ').'
             ]);
         }
 
