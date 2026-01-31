@@ -37,9 +37,11 @@ class InstallmentController extends Controller
             'interest_amount' => 'required|numeric|min:0'
         ]);
 
-        $installment->update(['interest_amount' => $validated['interest_amount']]);
+        // Asignación directa y guardado explícito
+        $installment->interest_amount = $validated['interest_amount'];
+        $installment->save();
         
-        // Recalcular estados por si el cambio de interés afecta el saldo total
+        // Forzar recálculo de estados
         \Illuminate\Support\Facades\Artisan::call('installments:update-status');
 
         return back()->with('success', 'Interés actualizado correctamente.');
