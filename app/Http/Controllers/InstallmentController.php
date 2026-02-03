@@ -31,20 +31,22 @@ class InstallmentController extends Controller
             return back()->with('success', 'Cuota actualizada correctamente.');
         }
 
-    public function updateInterest(Request $request, Installment $installment)
+    public function updateInterest(Request $request, \App\Models\Installment $installment)
     {
+        // 1. Validar
         $validated = $request->validate([
             'interest_amount' => 'required|numeric|min:0'
         ]);
 
-        // Asignación directa y guardado explícito
+        // 2. Asignación directa y guardado
         $installment->interest_amount = $validated['interest_amount'];
         $installment->save();
         
-        // Forzar recálculo de estados
+        // 3. Forzar recalculo de estados (por si el interés salda o endeuda la cuota)
         \Illuminate\Support\Facades\Artisan::call('installments:update-status');
 
-        return back()->with('success', 'Interés actualizado correctamente.');
+        // 4. Retorno con mensaje de éxito
+        return back()->with('success', 'Interés actualizado a $' . number_format($installment->interest_amount, 2));
     }
 
     public function bulkCondone(Request $request)

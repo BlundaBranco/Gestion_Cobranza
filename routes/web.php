@@ -88,7 +88,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/payment-plans/{plan}/update-currency', [PaymentPlanController::class, 'updateCurrency'])->name('payment-plans.updateCurrency');
     
 
-    Route::put('/installments/{installment}/interest', [InstallmentController::class, 'updateInterest'])->name('installments.update-interest');
+    Route::put('/installments/{installment}/interest', [\App\Http\Controllers\InstallmentController::class, 'updateInterest'])->name('installments.update-interest');
     Route::post('/installments/bulk-condone', [InstallmentController::class, 'bulkCondone'])->name('installments.bulk-condone');
 
 });
