@@ -63,12 +63,15 @@ class ClientController extends Controller
             'documents'
         ]);
         
+        // Estructura para agrupar estadísticas por moneda (MXN, USD)
         $statsByCurrency = [];
         $pendingInstallmentsCount = 0;
         
+        // Recorrer todos los planes de todos los lotes del cliente
         foreach ($client->lots->flatMap->paymentPlans as $plan) {
-            $currency = $plan->currency;
+            $currency = $plan->currency ?? 'MXN'; // Moneda por defecto si es nula
 
+            // Inicializar contadores para esta moneda si no existen
             if (!isset($statsByCurrency[$currency])) {
                 $statsByCurrency[$currency] = [
                     'total_debt' => 0,
@@ -77,34 +80,40 @@ class ClientController extends Controller
                     'total_paid' => 0,
                     'paid_capital' => 0,
                     'paid_interest' => 0,
-                    'months_overdue' => 0, // <-- NUEVO: Contador de meses en mora
+                    'months_overdue' => 0, // <-- Funcionalidad pagada: Meses en mora
                 ];
             }
 
             foreach ($plan->installments as $installment) {
+                // Calcular totales de la cuota
                 $totalPaidForInstallment = $installment->transactions->sum('pivot.amount_applied');
                 $interestAmount = $installment->interest_amount;
-                $baseAmount = $installment->amount ?? $installment->base_amount;
+                $baseAmount = $installment->amount ?? $installment->base_amount; // Usar monto editado o base
                 $totalAmount = $baseAmount + $interestAmount;
                 
+                // Calcular deuda restante
                 $remainingTotal = $totalAmount - $totalPaidForInstallment;
 
+                // Desglose de lo PAGADO: Asumimos que se paga primero interés, luego capital
                 $paidInterest = min($totalPaidForInstallment, $interestAmount);
                 $paidCapital = $totalPaidForInstallment - $paidInterest;
 
+                // Acumular Pagado
                 $statsByCurrency[$currency]['total_paid'] += $totalPaidForInstallment;
                 $statsByCurrency[$currency]['paid_capital'] += $paidCapital;
                 $statsByCurrency[$currency]['paid_interest'] += $paidInterest;
 
+                // Si hay deuda pendiente (con tolerancia de 1 centavo)
                 if ($remainingTotal > 0.01) {
                     $pendingInstallmentsCount++;
                     
-                    $remainingInterest = $interestAmount - $paidInterest;
-                    $remainingCapital = $baseAmount - $paidCapital;
+                    $remainingInterest = max(0, $interestAmount - $paidInterest);
+                    $remainingCapital = max(0, $baseAmount - $paidCapital);
                     
+                    // Acumular Deuda
                     $statsByCurrency[$currency]['total_debt'] += $remainingTotal;
-                    $statsByCurrency[$currency]['debt_capital'] += max(0, $remainingCapital);
-                    $statsByCurrency[$currency]['debt_interest'] += max(0, $remainingInterest);
+                    $statsByCurrency[$currency]['debt_capital'] += $remainingCapital;
+                    $statsByCurrency[$currency]['debt_interest'] += $remainingInterest;
 
                     // NUEVO: Si la cuota está vencida y tiene saldo, sumar al contador de meses
                     if ($installment->status === 'vencida') {
@@ -116,7 +125,6 @@ class ClientController extends Controller
         
         return view('clients.show', compact('client', 'pendingInstallmentsCount', 'statsByCurrency'));
     }
-
     
     public function edit(Client $client)
     {
@@ -135,7 +143,6 @@ class ClientController extends Controller
             'additional_phones' => 'nullable|string|max:500',
         ]);
 
-        // Usar update() directamente con los datos validados asegura que se guarden todos los campos.
         $client->update($validated);
 
         return redirect()->route('clients.edit', $client)->with('success', 'Cliente actualizado exitosamente.');
