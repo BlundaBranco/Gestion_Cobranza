@@ -294,23 +294,36 @@
                                                         <td class="px-4 py-3 font-medium text-gray-900">{{ format_currency($installment->amount ?? $installment->base_amount, $plan->currency) }}</td>
                                                         
                                                         {{-- 4. Intereses (Con botón de edición) --}}
-                                                        <td class="px-4 py-3 font-medium text-yellow-600 relative" x-data="{ open: false }">
-                                                            <div class="flex items-center gap-1">
+                                                        <td class="px-4 py-3 font-medium text-yellow-600">
+                                                            {{-- Formulario oculto para el envío --}}
+                                                            <form id="interest-form-{{ $installment->id }}" action="{{ route('installments.update-interest', $installment) }}" method="POST" style="display: none;">
+                                                                @csrf 
+                                                                @method('PUT')
+                                                                <input type="hidden" name="interest_amount" id="input-interest-{{ $installment->id }}">
+                                                            </form>
+
+                                                            {{-- Botón de acción --}}
+                                                            <button 
+                                                                type="button"
+                                                                onclick="
+                                                                    let currentInterest = '{{ $installment->interest_amount }}';
+                                                                    let newAmount = prompt('Ingrese el nuevo monto de interés para la cuota {{ $installment->installment_number }}:', currentInterest);
+                                                                    
+                                                                    // Si el usuario ingresó algo y no canceló
+                                                                    if (newAmount !== null && newAmount.trim() !== '') {
+                                                                        // Reemplazar comas por puntos por si acaso usa formato español
+                                                                        newAmount = newAmount.replace(',', '.');
+                                                                        
+                                                                        document.getElementById('input-interest-{{ $installment->id }}').value = newAmount;
+                                                                        document.getElementById('interest-form-{{ $installment->id }}').submit();
+                                                                    }
+                                                                "
+                                                                class="flex items-center gap-2 hover:text-yellow-800 hover:bg-yellow-50 px-2 py-1 rounded transition-colors"
+                                                                title="Clic para modificar interés manualmente"
+                                                            >
                                                                 <span>{{ format_currency($installment->interest_amount, $plan->currency) }}</span>
-                                                                <button @click="open = !open" class="text-xs text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Editar Interés">
-                                                                    <i class="fas fa-pencil-alt"></i>
-                                                                </button>
-                                                            </div>
-                                                            <div x-show="open" @click.outside="open = false" class="absolute left-0 top-full mt-1 bg-white border border-gray-200 shadow-lg p-2 rounded-md z-10 w-48" style="display: none;">
-                                                                <form action="{{ route('installments.update-interest', $installment) }}" method="POST">
-                                                                    @csrf @method('PUT')
-                                                                    <label class="block text-xs font-bold text-gray-600 mb-1">Ajustar Interés:</label>
-                                                                    <div class="flex gap-1">
-                                                                        <input type="number" step="0.01" name="interest_amount" value="{{ $installment->interest_amount }}" class="w-full text-xs border-gray-300 rounded p-1 focus:ring-indigo-500 focus:border-indigo-500">
-                                                                        <button type="submit" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700">OK</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
+                                                                <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                                            </button>
                                                         </td>
 
                                                         {{-- 5. Total Cuota --}}
