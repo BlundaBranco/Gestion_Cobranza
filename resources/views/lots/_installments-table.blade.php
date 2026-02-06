@@ -98,24 +98,34 @@
                             </div>
                         </td>
 
-                        {{-- 4. Intereses (Editable con Popover) --}}
-                        <td class="px-4 py-3" x-data="{ open: false }">
-                            <button @click="open = !open" class="text-orange-600 font-medium hover:text-orange-800 border-b border-dashed border-orange-300 hover:border-orange-500 transition-colors cursor-pointer" title="Click para agregar/editar interés">
-                                {{ format_currency($installment->interest_amount, $plan->currency) }}
+                        {{-- 4. Intereses (Editable con prompt nativo) --}}
+                        <td class="px-4 py-3 font-medium text-orange-600">
+                            {{-- Formulario oculto para el envío --}}
+                            <form id="interest-form-{{ $installment->id }}" action="{{ route('installments.update-interest', $installment) }}" method="POST" style="display: none;">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="interest_amount" id="input-interest-{{ $installment->id }}">
+                            </form>
+
+                            {{-- Botón que lanza prompt() nativo --}}
+                            <button
+                                type="button"
+                                onclick="
+                                    let currentInterest = '{{ $installment->interest_amount }}';
+                                    let newAmount = prompt('Ingrese el nuevo monto de interés para la cuota {{ $installment->installment_number == 0 ? 'E' : $installment->installment_number }}:', currentInterest);
+
+                                    if (newAmount !== null && newAmount.trim() !== '') {
+                                        newAmount = newAmount.replace(',', '.');
+                                        document.getElementById('input-interest-{{ $installment->id }}').value = newAmount;
+                                        document.getElementById('interest-form-{{ $installment->id }}').submit();
+                                    }
+                                "
+                                class="flex items-center gap-1.5 hover:text-orange-800 hover:bg-orange-50 px-2 py-1 rounded transition-colors cursor-pointer border-b border-dashed border-orange-300 hover:border-orange-500"
+                                title="Clic para modificar interés manualmente (0 para condonar)"
+                            >
+                                <span>{{ format_currency($installment->interest_amount, $plan->currency) }}</span>
+                                <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             </button>
-                            
-                            {{-- Popover de Edición de Interés --}}
-                            <div x-show="open" @click.outside="open = false" class="absolute bg-white border border-gray-200 shadow-xl p-3 rounded-lg z-50 mt-1 w-48" style="display: none;">
-                                <form action="{{ route('installments.update-interest', $installment) }}" method="POST">
-                                    @csrf @method('PUT')
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Modificar Interés:</label>
-                                    <div class="flex gap-2">
-                                        <input type="number" step="0.01" name="interest_amount" value="{{ $installment->interest_amount }}" class="w-full text-sm border-gray-300 rounded-md p-1 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <button type="submit" class="bg-indigo-600 text-white px-2 py-1 rounded-md text-xs font-semibold hover:bg-indigo-500 shadow-sm">OK</button>
-                                    </div>
-                                    <p class="text-[10px] text-gray-400 mt-1">Pon 0 para condonar.</p>
-                                </form>
-                            </div>
                         </td>
 
                         {{-- 5. Total (con Adeudo) --}}
