@@ -33,19 +33,22 @@ class InstallmentController extends Controller
 
     public function updateInterest(Request $request, \App\Models\Installment $installment)
     {
-        // 1. Validar
-        $validated = $request->validate([
-            'interest_amount' => 'required|numeric|min:0'
+        // 1. Validar el input
+        $request->validate([
+            'interest_amount' => 'required|numeric|min:0',
         ]);
 
-        // 2. Asignación directa y guardado
-        $installment->interest_amount = $validated['interest_amount'];
+        // 2. Asignación directa y guardado explícito (evita problemas con $fillable / $guarded)
+        $installment->interest_amount = $request->input('interest_amount');
         $installment->save();
-        
-        // 3. Forzar recalculo de estados (por si el interés salda o endeuda la cuota)
-        \Illuminate\Support\Facades\Artisan::call('installments:update-status');
 
-        // 4. Retorno con mensaje de éxito
+        // 3. Refrescar el modelo desde la BD para confirmar persistencia
+        $installment->refresh();
+
+        // 4. Recalcular estados e intereses globales
+        Artisan::call('installments:update-status');
+
+        // 5. Retorno con mensaje de éxito
         return back()->with('success', 'Interés actualizado a $' . number_format($installment->interest_amount, 2));
     }
 
