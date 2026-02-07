@@ -19,4 +19,9 @@ class Owner extends Model
     {
         return $this->belongsToMany(User::class, 'owner_user');
     }
+
+    public function sequence()
+    {
+        return $this->hasOne(OwnerSequence::class);
+    }
 }

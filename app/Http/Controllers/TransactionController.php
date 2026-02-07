@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Installment;
 use App\Models\Transaction;
 use App\Models\Owner;
+use App\Models\OwnerSequence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -150,7 +151,25 @@ class TransactionController extends Controller
                 $amountToApply -= $amountForThisInstallment;
             }
             
-            $transaction->folio_number = 'FOLIO-' . str_pad($transaction->id, 6, '0', STR_PAD_LEFT);
+            // --- LÓGICA DE FOLIO MULTI-EMISOR ---
+            // Obtener el owner_id a partir del primer lote asociado a las cuotas pagadas
+            $ownerId = null;
+            $firstInstallment = $installmentsToProcess->first();
+            if ($firstInstallment) {
+                $lot = $firstInstallment->paymentPlan->lot ?? null;
+                $ownerId = $lot?->owner_id;
+            }
+
+            if ($ownerId) {
+                // Secuencia independiente por Owner (usa lockForUpdate internamente)
+                $nextValue = OwnerSequence::getNextValue($ownerId);
+                $transaction->folio_number = 'FOLIO-' . str_pad($nextValue, 6, '0', STR_PAD_LEFT);
+            } else {
+                // Fallback para lotes sin owner: usar el ID de la transacción
+                $transaction->folio_number = 'FOLIO-' . str_pad($transaction->id, 6, '0', STR_PAD_LEFT);
+            }
+            // --- FIN LÓGICA DE FOLIO MULTI-EMISOR ---
+
             $transaction->save();
 
             DB::commit();
