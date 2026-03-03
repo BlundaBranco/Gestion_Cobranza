@@ -23,11 +23,15 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
         $this->endDate = $endDate;
         $this->ownerId = $ownerId;
     }
+
     public function query()
     {
-        // Precargar todas las relaciones necesarias
         return Transaction::query()
-            ->with(['client', 'installments.paymentPlan.lot.owner', 'installments.paymentPlan.service'])
+            ->with([
+                'client',
+                'installments.paymentPlan.lot',
+                'installments.transactions',
+            ])
             ->whereBetween('payment_date', [$this->startDate, $this->endDate])
             ->when($this->ownerId, function ($query) {
                 $query->whereHas('installments.paymentPlan.lot', fn ($q) => $q->where('owner_id', $this->ownerId));
@@ -37,32 +41,63 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
 
     public function headings(): array
     {
-        return ['Folio', 'Fecha', 'Cliente', 'Socio', 'Manzana', 'Lote', 'Concepto', 'Monto', 'Moneda', 'Notas'];
+        return ['NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD'];
     }
 
     public function map($transaction): array
     {
-        $installments = $transaction->installments->sortBy('installment_number');
-        $firstInstallment = $installments->first();
-        $lot = $firstInstallment->paymentPlan->lot ?? null;
-        
-        // Generar concepto con múltiples cuotas
-        $concepto = $installments->map(function ($inst) {
-            $num = $inst->installment_number == 0 ? 'E' : $inst->installment_number;
-            return "{$inst->paymentPlan->service->name} (Cuota {$num})";
-        })->unique()->join(', ');
+        $capitalPaid  = 0;
+        $interestPaid = 0;
+
+        $firstInstallment = $transaction->installments->first();
+        $currency = $firstInstallment?->paymentPlan->currency ?? 'MXN';
+        $lot      = $firstInstallment?->paymentPlan->lot ?? null;
+
+        foreach ($transaction->installments as $installment) {
+            $interestAmount = (float) $installment->interest_amount;
+            $amountApplied  = (float) $installment->pivot->amount_applied;
+
+            // Sum the interest already covered by transactions that preceded this one
+            $priorInterestPaid = 0;
+            $priorTransactions = $installment->transactions
+                ->where('id', '!=', $transaction->id)
+                ->sortBy(fn ($tx) => $tx->payment_date->timestamp * 1_000_000 + $tx->id);
+
+            foreach ($priorTransactions as $priorTx) {
+                $pendingInterest    = max(0, $interestAmount - $priorInterestPaid);
+                $priorInterestPaid += min((float) $priorTx->pivot->amount_applied, $pendingInterest);
+            }
+
+            $pendingInterest        = max(0, $interestAmount - $priorInterestPaid);
+            $interestInCurrentTx    = min($amountApplied, $pendingInterest);
+            $capitalInCurrentTx     = $amountApplied - $interestInCurrentTx;
+
+            $capitalPaid  += $capitalInCurrentTx;
+            $interestPaid += $interestInCurrentTx;
+        }
+
+        if ($currency === 'USD') {
+            $dlls    = $capitalPaid;
+            $pesos   = 0;
+            $intDll  = $interestPaid;
+            $intPeso = 0;
+        } else {
+            $dlls    = 0;
+            $pesos   = $capitalPaid;
+            $intDll  = 0;
+            $intPeso = $interestPaid;
+        }
 
         return [
-            $transaction->folio_number,
-            $transaction->payment_date->format('d/m/Y'),
             $transaction->client->name,
-            $lot->owner->name ?? 'N/A',
+            $lot->lot_number   ?? 'N/A',
             $lot->block_number ?? 'N/A',
-            $lot->lot_number ?? 'N/A',
-            $concepto,
-            $transaction->amount_paid,
-            $firstInstallment->paymentPlan->currency ?? 'MXN', // Moneda
-            $transaction->notes,
+            $dlls,
+            $pesos,
+            $transaction->payment_date->format('d/m/Y'),
+            $intDll,
+            $intPeso,
+            $capitalPaid,
         ];
     }
 
@@ -73,7 +108,11 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
 
     public function columnFormats(): array
     {
-        // Columna H = Monto
-        return ['H' => NumberFormat::FORMAT_ACCOUNTING_USD];
+        return [
+            'D' => NumberFormat::FORMAT_ACCOUNTING_USD,
+            'E' => NumberFormat::FORMAT_ACCOUNTING_USD,
+            'G' => NumberFormat::FORMAT_ACCOUNTING_USD,
+            'H' => NumberFormat::FORMAT_ACCOUNTING_USD,
+        ];
     }
 }
