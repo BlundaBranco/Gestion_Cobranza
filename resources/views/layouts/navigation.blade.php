@@ -41,6 +41,11 @@
                     <x-nav-link :href="route('reports.income')" :active="request()->routeIs('reports.*')">
                         {{ __('Reportes') }}
                     </x-nav-link>
+                    @if(auth()->user()->isAdmin())
+                    <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
+                        {{ __('Usuarios') }}
+                    </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -108,6 +113,11 @@
             <x-responsive-nav-link :href="route('reports.income')" :active="request()->routeIs('reports.*')">
                 {{ __('Reportes') }}
             </x-responsive-nav-link>
+            @if(auth()->user()->isAdmin())
+            <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
+                {{ __('Usuarios') }}
+            </x-responsive-nav-link>
+            @endif
         </div>
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">

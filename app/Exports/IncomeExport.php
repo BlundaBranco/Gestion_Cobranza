@@ -41,7 +41,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
 
     public function headings(): array
     {
-        return ['NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD'];
+        return ['FOLIO', 'NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD'];
     }
 
     public function map($transaction): array
@@ -88,7 +88,12 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
             $intPeso = $interestPaid;
         }
 
+        $concepto = $transaction->installments
+            ->map(fn ($i) => \Carbon\Carbon::parse($i->due_date)->locale('es')->isoFormat('MMM YYYY'))
+            ->join(', ');
+
         return [
+            $transaction->folio_number,
             $transaction->client->name,
             $lot->lot_number   ?? 'N/A',
             $lot->block_number ?? 'N/A',
@@ -97,7 +102,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
             $transaction->payment_date->format('d/m/Y'),
             $intDll,
             $intPeso,
-            $capitalPaid,
+            $concepto,
         ];
     }
 
@@ -109,10 +114,10 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
     public function columnFormats(): array
     {
         return [
-            'D' => NumberFormat::FORMAT_ACCOUNTING_USD,
             'E' => NumberFormat::FORMAT_ACCOUNTING_USD,
-            'G' => NumberFormat::FORMAT_ACCOUNTING_USD,
+            'F' => NumberFormat::FORMAT_ACCOUNTING_USD,
             'H' => NumberFormat::FORMAT_ACCOUNTING_USD,
+            'I' => NumberFormat::FORMAT_ACCOUNTING_USD,
         ];
     }
 }
