@@ -150,9 +150,9 @@ class TransactionController extends Controller
 
                 $amountToApply -= $amountForThisInstallment;
             }
-            
+
             // --- LÓGICA DE FOLIO MULTI-EMISOR ---
-            // Obtener el owner_id a partir del primer lote asociado a las cuotas pagadas
+            // Debe ejecutarse DENTRO de la transacción DB para que lockForUpdate sea efectivo.
             $ownerId = null;
             $firstInstallment = $installmentsToProcess->first();
             if ($firstInstallment) {
@@ -161,7 +161,8 @@ class TransactionController extends Controller
             }
 
             if ($ownerId) {
-                // Secuencia independiente por Owner (usa lockForUpdate internamente)
+                // Secuencia independiente por Owner. lockForUpdate() en getNextValue
+                // garantiza atomicidad únicamente cuando se llama dentro de esta transacción.
                 $nextValue = OwnerSequence::getNextValue($ownerId);
                 $transaction->folio_number = 'FOLIO-' . str_pad($nextValue, 6, '0', STR_PAD_LEFT);
             } else {
@@ -175,6 +176,7 @@ class TransactionController extends Controller
             DB::commit();
 
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', 'Error al procesar el pago: ' . $e->getMessage())->withInput();
         }
 

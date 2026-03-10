@@ -16,6 +16,7 @@ use App\Http\Controllers\InstallmentController;
 use App\Http\Controllers\BulkInstallmentUpdateController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,6 +91,10 @@ Route::middleware('auth')->group(function () {
 
     Route::put('/installments/{installment}/interest', [\App\Http\Controllers\InstallmentController::class, 'updateInterest'])->name('installments.update-interest');
     Route::post('/installments/bulk-condone', [InstallmentController::class, 'bulkCondone'])->name('installments.bulk-condone');
+
+    // --- ADMINISTRACIÓN DE USUARIOS (solo admin) ---
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.update-password');
 
 });
 
