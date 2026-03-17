@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(where php:*)",
+      "Bash(command -v php)",
+      "Bash(ls /c/php*)",
+      "Read(//c/xampp/php/**)",
+      "Bash(/c/xampp/php/php.exe artisan:*)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root -e \"SHOW DATABASES;\" 2>&1)",
+      "Bash(/c/xampp/php/php.exe -r \"echo phpversion\\(\\);\" 2>&1)",
+      "Bash(/c/xampp/mysql/bin/mysqladmin.exe -u root status 2>&1)",
+      "Bash(tasklist:*)",
+      "Bash(\"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe\" -u root -e \"SHOW DATABASES;\" 2>&1)",
+      "Bash(sleep:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

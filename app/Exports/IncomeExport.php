@@ -16,32 +16,36 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
     protected $startDate;
     protected $endDate;
     protected $ownerId;
+    protected $folioFrom;
+    protected $folioTo;
 
-    public function __construct($startDate, $endDate, $ownerId = null)
+    public function __construct($startDate, $endDate, $ownerId = null, $folioFrom = null, $folioTo = null)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
         $this->ownerId = $ownerId;
+        $this->folioFrom = $folioFrom;
+        $this->folioTo = $folioTo;
     }
 
     public function query()
     {
-        return Transaction::query()
+        return Transaction::withTrashed()
             ->with([
                 'client',
                 'installments.paymentPlan.lot',
                 'installments.transactions',
             ])
-            ->whereBetween('payment_date', [$this->startDate, $this->endDate])
-            ->when($this->ownerId, function ($query) {
-                $query->whereHas('installments.paymentPlan.lot', fn ($q) => $q->where('owner_id', $this->ownerId));
-            })
+            ->when($this->folioFrom, fn($q) => $q->where('id', '>=', $this->folioFrom))
+            ->when($this->folioTo, fn($q) => $q->where('id', '<=', $this->folioTo))
+            ->when(!$this->folioFrom && !$this->folioTo, fn($q) => $q->whereBetween('payment_date', [$this->startDate, $this->endDate]))
+            ->when($this->ownerId, fn($q) => $q->whereHas('installments.paymentPlan.lot', fn($sq) => $sq->where('owner_id', $this->ownerId)))
             ->orderBy('payment_date', 'desc');
     }
 
     public function headings(): array
     {
-        return ['FOLIO', 'NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD'];
+        return ['FOLIO', 'NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD', 'ESTADO'];
     }
 
     public function map($transaction): array
@@ -103,6 +107,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
             $intDll,
             $intPeso,
             $concepto,
+            $transaction->trashed() ? 'Cancelado' : 'Activo',
         ];
     }
 

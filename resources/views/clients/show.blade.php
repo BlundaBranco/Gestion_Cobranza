@@ -80,90 +80,6 @@
                 </div>
             </div>
 
-            <!-- Stats Cards (Desglose por Moneda) -->
-            <div class="space-y-6">
-                @php
-                    $plansByCurrency = $client->lots->flatMap->paymentPlans->groupBy('currency');
-                @endphp
-
-                @forelse ($plansByCurrency as $currency => $plans)
-                    @php
-                        $data = [
-                            'total_debt' => 0, 'debt_capital' => 0, 'debt_interest' => 0,
-                            'total_paid' => 0, 'paid_capital' => 0, 'paid_interest' => 0,
-                            'pending_installments' => 0, 'months_overdue' => 0
-                        ];
-                        foreach ($plans->flatMap->installments as $installment) {
-                            $totalPaid = $installment->transactions->sum('pivot.amount_applied');
-                            $interest = $installment->interest_amount;
-                            $base = $installment->amount ?? $installment->base_amount;
-                            $totalDue = $base + $interest;
-                            $remaining = $totalDue - $totalPaid;
-
-                            if ($remaining > 0.01) {
-                                $data['pending_installments']++;
-                                if ($installment->status === 'vencida') $data['months_overdue']++;
-
-                                $paidInterestOnDebt = min($totalPaid, $interest);
-                                $paidCapitalOnDebt = $totalPaid - $paidInterestOnDebt;
-                                $data['debt_interest'] += $interest - $paidInterestOnDebt;
-                                $data['debt_capital'] += $base - $paidCapitalOnDebt;
-                                $data['total_debt'] += $remaining;
-                            }
-
-                            $paidInterest = min($totalPaid, $interest);
-                            $paidCapital = $totalPaid - $paidInterest;
-                            $data['paid_interest'] += $paidInterest;
-                            $data['paid_capital'] += $paidCapital;
-                            $data['total_paid'] += $totalPaid;
-                        }
-                    @endphp
-
-                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                        <h3 class="font-bold text-xl text-gray-800 mb-4">Resumen en {{ $currency }}</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-
-                            <!-- Deuda -->
-                            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
-                                <p class="text-sm font-medium text-red-700">Deuda Pendiente</p>
-                                <p class="text-2xl font-bold text-red-600">{{ format_currency($data['total_debt'], $currency) }}</p>
-                                <div class="mt-2 text-xs text-gray-600 space-y-1">
-                                    <div class="flex justify-between"><span>Capital:</span> <span class="font-semibold">${{ number_format($data['debt_capital'], 2) }}</span></div>
-                                    <div class="flex justify-between"><span>Intereses:</span> <span class="font-semibold">${{ number_format($data['debt_interest'], 2) }}</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Pagado -->
-                            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                                <p class="text-sm font-medium text-green-700">Total Pagado</p>
-                                <p class="text-2xl font-bold text-green-600">{{ format_currency($data['total_paid'], $currency) }}</p>
-                                <div class="mt-2 text-xs text-gray-600 space-y-1">
-                                    <div class="flex justify-between"><span>A Capital:</span> <span class="font-semibold">${{ number_format($data['paid_capital'], 2) }}</span></div>
-                                    <div class="flex justify-between"><span>A Intereses:</span> <span class="font-semibold">${{ number_format($data['paid_interest'], 2) }}</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Info General -->
-                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                <p class="text-sm font-medium text-blue-700">Cuotas Pendientes</p>
-                                <p class="text-2xl font-bold text-blue-600">{{ $data['pending_installments'] }}</p>
-                            </div>
-
-                            <!-- Meses en Mora (EXTRA PAGADO) -->
-                            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                                <p class="text-sm font-medium text-orange-700">Meses en Mora</p>
-                                <p class="text-2xl font-bold text-orange-600">{{ $data['months_overdue'] }}</p>
-                                <p class="text-xs text-orange-600 mt-1">Cuotas vencidas impagas</p>
-                            </div>
-                        </div>
-                    </div>
-                @empty
-                    <div class="bg-white p-6 rounded-xl shadow-md border text-center">
-                        <p class="text-gray-500">Este cliente no tiene historial financiero.</p>
-                    </div>
-                @endforelse
-            </div>
-
             <!-- Tarjeta de Documentos del Cliente -->
             <div class="bg-white overflow-hidden shadow-lg sm:rounded-xl border border-gray-200">
                 <div class="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-200">
@@ -229,14 +145,81 @@
                                 <h3 class="text-xl font-bold text-gray-900">Lote: {{ $lot->identifier }}</h3>
                             </div>
                         </div>
-                        
+
+                        {{-- Resumen por moneda para este lote --}}
+                        @php $lotPlansByCurrency = $lot->paymentPlans->groupBy('currency'); @endphp
+                        @foreach ($lotPlansByCurrency as $lotCurrency => $lotPlans)
+                            @php
+                                $ld = [
+                                    'total_debt' => 0, 'debt_capital' => 0, 'debt_interest' => 0,
+                                    'total_paid' => 0, 'paid_capital' => 0, 'paid_interest' => 0,
+                                    'pending_installments' => 0, 'months_overdue' => 0,
+                                ];
+                                foreach ($lotPlans->flatMap->installments as $inst) {
+                                    $ldPaid    = $inst->transactions->sum('pivot.amount_applied');
+                                    $ldInt     = $inst->interest_amount;
+                                    $ldBase    = $inst->amount ?? $inst->base_amount;
+                                    $ldDue     = $ldBase + $ldInt;
+                                    $ldRemain  = $ldDue - $ldPaid;
+
+                                    if ($ldRemain > 0.01) {
+                                        $ld['pending_installments']++;
+                                        if ($inst->status === 'vencida') $ld['months_overdue']++;
+                                        $piOnDebt = min($ldPaid, $ldInt);
+                                        $ld['debt_interest'] += $ldInt - $piOnDebt;
+                                        $ld['debt_capital']  += $ldBase - ($ldPaid - $piOnDebt);
+                                        $ld['total_debt']    += $ldRemain;
+                                    }
+                                    $pi = min($ldPaid, $ldInt);
+                                    $ld['paid_interest'] += $pi;
+                                    $ld['paid_capital']  += $ldPaid - $pi;
+                                    $ld['total_paid']    += $ldPaid;
+                                }
+                            @endphp
+                            <div class="px-6 pt-4 pb-2">
+                                @if (count($lotPlansByCurrency) > 1)
+                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Resumen en {{ $lotCurrency }}</p>
+                                @endif
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                                        <p class="text-xs font-medium text-red-700">Deuda Pendiente</p>
+                                        <p class="text-xl font-bold text-red-600">{{ format_currency($ld['total_debt'], $lotCurrency) }}</p>
+                                        <div class="mt-1 text-xs text-gray-500 space-y-0.5">
+                                            <div class="flex justify-between"><span>Capital:</span><span class="font-semibold">{{ format_currency($ld['debt_capital'], $lotCurrency) }}</span></div>
+                                            <div class="flex justify-between"><span>Interés:</span><span class="font-semibold">{{ format_currency($ld['debt_interest'], $lotCurrency) }}</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                        <p class="text-xs font-medium text-green-700">Total Pagado</p>
+                                        <p class="text-xl font-bold text-green-600">{{ format_currency($ld['total_paid'], $lotCurrency) }}</p>
+                                        <div class="mt-1 text-xs text-gray-500 space-y-0.5">
+                                            <div class="flex justify-between"><span>A Capital:</span><span class="font-semibold">{{ format_currency($ld['paid_capital'], $lotCurrency) }}</span></div>
+                                            <div class="flex justify-between"><span>A Interés:</span><span class="font-semibold">{{ format_currency($ld['paid_interest'], $lotCurrency) }}</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                        <p class="text-xs font-medium text-blue-700">Cuotas Pendientes</p>
+                                        <p class="text-xl font-bold text-blue-600">{{ $ld['pending_installments'] }}</p>
+                                    </div>
+                                    <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                                        <p class="text-xs font-medium text-orange-700">Meses en Mora</p>
+                                        <p class="text-xl font-bold text-orange-600">{{ $ld['months_overdue'] }}</p>
+                                        <p class="text-xs text-orange-500 mt-1">Cuotas vencidas impagas</p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+
                         <div class="p-6 text-gray-900">
                             @forelse ($lot->paymentPlans as $plan)
                                 <div class="mt-4 first:mt-0" x-data="{ selected: [], allSelected: false }">
                                     
                                     {{-- Encabezado del Plan y Barra de Acciones Masivas --}}
+                                    @php
+                                        $planTotalFromInstallments = $plan->installments->sum(fn($i) => $i->amount ?? $i->base_amount);
+                                    @endphp
                                     <div class="bg-gradient-to-r from-indigo-50 to-white rounded-lg p-4 mb-4 border border-indigo-100 flex justify-between items-center">
-                                        <h4 class="font-bold text-lg text-gray-800">{{ $plan->service->name }} <span class="text-indigo-600">- Total: {{ format_currency($plan->total_amount, $plan->currency) }}</span></h4>
+                                        <h4 class="font-bold text-lg text-gray-800">{{ $plan->service->name }} <span class="text-indigo-600">- Total: {{ format_currency($planTotalFromInstallments, $plan->currency) }}</span></h4>
                                         
                                         {{-- Barra Masiva (Solo visible al seleccionar) --}}
                                         <div x-show="selected.length > 0" style="display: none;">

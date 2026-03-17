@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
-use App\Models\Owner; // Importar el modelo Owner
+use App\Models\Owner;
+use App\Models\Installment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon; // Necesario para las fechas por defecto
+use Illuminate\Support\Carbon;
 use App\Exports\IncomeExport;
+use App\Exports\OverdueInstallmentsExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
@@ -24,7 +26,7 @@ class ReportController extends Controller
         $folioFrom = $request->input('folio_from');
         $folioTo = $request->input('folio_to');
 
-        $query = \App\Models\Transaction::with(['client', 'installments.paymentPlan.lot.owner']);
+        $query = \App\Models\Transaction::withTrashed()->with(['client', 'installments.paymentPlan.lot.owner']);
 
         // LOGICA DE FILTRADO
         
@@ -58,15 +60,12 @@ class ReportController extends Controller
 
 $transactions = $query->orderBy('payment_date', 'desc')->get();
 
-        // --- CORRECCIÓN: Agrupar totales por moneda ---
-        $incomeByCurrency = $transactions->groupBy(function ($tr) {
-            // Obtenemos la moneda del plan de pago asociado a la primera cuota
-            // Si no tiene, asumimos MXN
+        // Solo sumar transacciones activas en los totales
+        $incomeByCurrency = $transactions->filter(fn($t) => $t->status === 'active')->groupBy(function ($tr) {
             return $tr->installments->first()->paymentPlan->currency ?? 'MXN';
         })->map(function ($group) {
             return $group->sum('amount_paid');
         });
-        // ----------------------------------------------
         
         $owners = \App\Models\Owner::orderBy('name')->get();
 
@@ -82,23 +81,39 @@ $transactions = $query->orderBy('payment_date', 'desc')->get();
         ]);
     }
 
-    public function overdueInstallments()
+    public function overdueInstallments(Request $request)
     {
-        $overdueInstallments = \App\Models\Installment::where('status', 'vencida')
-            ->with(['paymentPlan.lot.client', 'transactions'])
-            ->orderBy('due_date', 'asc')
-            ->paginate(25); // Paginar para manejar grandes cantidades
+        $query = \App\Models\Installment::where('status', 'vencida')
+            ->with(['paymentPlan.lot.client', 'paymentPlan.lot', 'transactions'])
+            ->when($request->owner_id, fn($q, $v) => $q->whereHas('paymentPlan.lot', fn($sq) => $sq->where('owner_id', $v)))
+            ->when($request->block_number, fn($q, $v) => $q->whereHas('paymentPlan.lot', fn($sq) => $sq->where('block_number', 'like', "%$v%")))
+            ->orderBy('due_date', 'asc');
 
-        return view('reports.overdue', compact('overdueInstallments'));
+        $overdueInstallments = $query->paginate(25)->withQueryString();
+        $owners = Owner::orderBy('name')->get();
+        $selectedOwner = $request->owner_id;
+        $blockNumber = $request->block_number;
+
+        return view('reports.overdue', compact('overdueInstallments', 'owners', 'selectedOwner', 'blockNumber'));
     }
-    
+
     public function export(Request $request)
     {
         $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
         $ownerId = $request->input('owner_id');
+        $folioFrom = $request->input('folio_from');
+        $folioTo = $request->input('folio_to');
 
-        return Excel::download(new IncomeExport($startDate, $endDate, $ownerId), 'reporte_ingresos.xlsx');
+        return Excel::download(new IncomeExport($startDate, $endDate, $ownerId, $folioFrom, $folioTo), 'reporte_ingresos.xlsx');
+    }
+
+    public function exportOverdue(Request $request)
+    {
+        return Excel::download(
+            new OverdueInstallmentsExport($request->owner_id, $request->block_number),
+            'cuotas_vencidas.xlsx'
+        );
     }
 
 }

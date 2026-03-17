@@ -118,17 +118,23 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($transactions as $transaction)
-                                <tr class="hover:bg-blue-50 transition-colors duration-150">
+                                @php $isCancelled = $transaction->status === 'cancelled'; @endphp
+                                <tr class="{{ $isCancelled ? 'bg-gray-50 opacity-75' : 'hover:bg-blue-50' }} transition-colors duration-150">
                                     <td class="px-6 py-4">
-                                        <a href="{{ route('transactions.pdf', $transaction) }}" target="_blank" class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:underline font-semibold">
-                                            {{ $transaction->folio_number }}
-                                        </a>
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ route('transactions.pdf', $transaction->id) }}" target="_blank" class="inline-flex items-center gap-1.5 {{ $isCancelled ? 'line-through text-gray-400' : 'text-blue-600 hover:text-blue-700 hover:underline' }} font-semibold">
+                                                {{ $transaction->folio_number }}
+                                            </a>
+                                            @if($isCancelled)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">CANCELADO</span>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 text-gray-700 font-medium">{{ $transaction->payment_date->format('d/m/Y') }}</td>
                                     <td class="px-6 py-4">
                                         <span class="text-gray-900 font-medium">{{ $transaction->client->name }}</span>
                                     </td>
-                                    <td class="px-6 py-4 font-bold text-green-600">
+                                    <td class="px-6 py-4 font-bold {{ $isCancelled ? 'line-through text-gray-400' : 'text-green-600' }}">
                                         @php
                                             $firstInstallment = $transaction->installments->first();
                                             $currency = $firstInstallment ? $firstInstallment->paymentPlan->currency : 'MXN';
