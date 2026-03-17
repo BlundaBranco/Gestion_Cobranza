@@ -1,5 +1,5 @@
 <table>
-    <thead>
+    <tbody>
         <!-- Encabezado del Cliente -->
         <tr>
             <th colspan="7" style="font-weight: bold; font-size: 16px; text-align: center; height: 30px; vertical-align: middle;">
@@ -17,17 +17,21 @@
         </tr>
         <tr><td colspan="7"></td></tr>
 
-        <!-- RESUMEN DINÁMICO POR MONEDA Y SERVICIO -->
-        @foreach($summary as $currency => $services)
+        <!-- DETALLE POR LOTE (con resumen antes de cada uno) -->
+        @foreach ($client->lots as $lot)
+
+            {{-- Encabezado del lote --}}
             <tr>
-                <th colspan="7" style="font-weight: bold; background-color: #333333; color: #ffffff; text-align: center; border: 1px solid #000000;">
-                    RESUMEN GLOBAL EN {{ $currency }}
-                </th>
+                <td colspan="7" style="font-weight: bold; background-color: #cccccc; border: 2px solid #000000; font-size: 12px;">
+                    UBICACIÓN: MANZANA {{ $lot->block_number }} - LOTE {{ $lot->lot_number }} | SOCIO: {{ $lot->owner->name ?? 'N/A' }}
+                </td>
             </tr>
-            @foreach($services as $serviceName => $stats)
+
+            {{-- Resumen por moneda para este lote --}}
+            @foreach ($lotSummaries[$lot->id] as $currency => $stats)
                 <tr>
-                    <th colspan="7" style="font-weight: bold; background-color: #f0f0f0; color: #0000FF; border: 1px solid #000000;">
-                        SERVICIO: {{ strtoupper($serviceName) }}
+                    <th colspan="7" style="font-weight: bold; background-color: #333333; color: #ffffff; text-align: center; border: 1px solid #000000;">
+                        RESUMEN EN {{ $currency }}
                     </th>
                 </tr>
                 <tr>
@@ -47,29 +51,26 @@
                     <td colspan="3" style="border: 1px solid #000000; text-align: right;">{{ format_currency($stats['paid_interest'], $currency) }}</td>
                 </tr>
                 <tr>
-                    <td style="border: 1px solid #000000; font-weight: bold;">TOTAL:</td>
+                    <td style="border: 1px solid #000000; font-weight: bold;">TOTAL ADEUDO:</td>
                     <td colspan="2" style="border: 1px solid #000000; font-weight: bold; color: #ff0000; text-align: right;">{{ format_currency($stats['total_debt'], $currency) }}</td>
-                    <td style="border: 1px solid #000000; font-weight: bold;">TOTAL:</td>
+                    <td style="border: 1px solid #000000; font-weight: bold;">TOTAL PAGADO:</td>
                     <td colspan="3" style="border: 1px solid #000000; font-weight: bold; color: #008000; text-align: right;">{{ format_currency($stats['total_paid'], $currency) }}</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #000000; font-weight: bold;">VALOR PLAN:</td>
+                    <td colspan="6" style="border: 1px solid #000000; font-weight: bold; text-align: right;">{{ format_currency($stats['total_from_installments'], $currency) }}</td>
                 </tr>
                 <tr><td colspan="7"></td></tr>
             @endforeach
-        @endforeach
-    </thead>
 
-    <tbody>
-        <!-- DETALLE DESGLOSADO POR LOTE -->
-        @foreach ($client->lots as $lot)
-            <tr>
-                <td colspan="7" style="font-weight: bold; background-color: #cccccc; border: 2px solid #000000; font-size: 12px;">
-                    UBICACIÓN: MANZANA {{ $lot->block_number }} - LOTE {{ $lot->lot_number }} | SOCIO: {{ $lot->owner->name ?? 'N/A' }}
-                </td>
-            </tr>
-            
+            {{-- Planes de pago del lote --}}
             @foreach ($lot->paymentPlans as $plan)
+                @php
+                    $planTotalFromInstallments = $plan->installments->sum(fn($i) => $i->amount ?? $i->base_amount);
+                @endphp
                 <tr>
                     <td colspan="7" style="font-weight: bold; background-color: #ffffff; border-left: 1px solid #000000; border-right: 1px solid #000000; color: #b0120a;">
-                        PLAN DE PAGO: {{ strtoupper($plan->service->name) }} | VALOR TOTAL: {{ format_currency($plan->total_amount, $plan->currency) }}
+                        PLAN DE PAGO: {{ strtoupper($plan->service->name) }} | VALOR TOTAL: {{ format_currency($planTotalFromInstallments, $plan->currency) }}
                     </td>
                 </tr>
                 <tr>
@@ -84,11 +85,11 @@
 
                 @foreach ($plan->installments->sortBy('installment_number') as $installment)
                     @php
-                        $totalDue = ($installment->amount ?? $installment->base_amount) + $installment->interest_amount;
-                        $totalPaid = $installment->transactions->sum('pivot.amount_applied');
-                        $remaining = $totalDue - $totalPaid;
+                        $totalDue      = ($installment->amount ?? $installment->base_amount) + $installment->interest_amount;
+                        $totalPaid     = $installment->transactions->sum('pivot.amount_applied');
+                        $remaining     = $totalDue - $totalPaid;
                         $displayNumber = $installment->installment_number == 0 ? 'Enganche' : $installment->installment_number;
-                        $paymentDates = $installment->transactions->pluck('payment_date')->map(fn($d) => $d->format('d/m/Y'))->join(', ');
+                        $paymentDates  = $installment->transactions->pluck('payment_date')->map(fn($d) => $d->format('d/m/Y'))->join(', ');
                     @endphp
                     <tr>
                         <td style="border: 1px solid #000000; text-align: center;">{{ $displayNumber }}</td>
@@ -104,6 +105,7 @@
                 @endforeach
                 <tr><td colspan="7" style="height: 10px;"></td></tr>
             @endforeach
+
         @endforeach
     </tbody>
 </table>

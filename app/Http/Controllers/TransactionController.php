@@ -53,23 +53,25 @@ class TransactionController extends Controller
     public function destroy(Transaction $transaction)
     {
         DB::transaction(function () use ($transaction) {
-            // 1. Revertir el estado de las cuotas afectadas
+            // 1. Revertir el estado de las cuotas y poner amount_applied a 0 en pivot
             foreach ($transaction->installments as $installment) {
-                // Si la cuota estaba marcada como 'pagada', al borrar este pago
-                // ya no está totalmente pagada, así que debemos cambiar su estado.
                 if ($installment->status === 'pagada') {
-                    // Si la fecha de vencimiento ya pasó, vuelve a 'vencida', sino 'pendiente'
                     $installment->status = $installment->due_date < now() ? 'vencida' : 'pendiente';
                     $installment->save();
                 }
+                // Preservar relación pero anular el monto aplicado (mantiene auditoría del concepto)
+                $transaction->installments()->updateExistingPivot($installment->id, ['amount_applied' => 0]);
             }
 
-            // 2. Eliminar la transacción
-            // La tabla pivote (installment_transaction) se limpia sola gracias a onDelete('cascade') en la migración
+            // 2. Marcar como cancelada (soft delete + audit)
+            $transaction->update([
+                'status' => 'cancelled',
+                'cancelled_by' => auth()->id(),
+            ]);
             $transaction->delete();
         });
 
-        return back()->with('success', 'Transacción eliminada y estados actualizados correctamente.');
+        return back()->with('success', 'Transacción cancelada y estados revertidos correctamente.');
     }
 
 
@@ -95,22 +97,6 @@ class TransactionController extends Controller
 
         $amountPaid = floatval($validated['amount_paid']);
         $selectedInstallments = Installment::with('transactions')->find($validated['installments']);
-        
-        // --- CÁLCULO DE DEUDA ACTUALIZADO ---
-        $totalDueForSelected = $selectedInstallments->reduce(function ($carry, $installment) {
-            // Usa el campo 'amount' si existe, si no, el 'base_amount'
-            $totalOwed = ($installment->amount ?? $installment->base_amount) + $installment->interest_amount;
-            $totalPaid = $installment->transactions->sum('pivot.amount_applied');
-            return $carry + ($totalOwed - $totalPaid);
-        }, 0);
-        // --- FIN DE ACTUALIZACIÓN ---
-
-        if ($amountPaid > (round($totalDueForSelected, 2) + 0.05)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'amount_paid' => 'El monto ingresado ($' . number_format($amountPaid, 2) . ') excede el adeudo total de las cuotas seleccionadas ($' . number_format($totalDueForSelected, 2) . ').'
-            ]);
-        }
-
         $client = Client::findOrFail($validated['client_id']);
         $amountToApply = $amountPaid;
         $transaction = null;
@@ -185,8 +171,9 @@ class TransactionController extends Controller
             ->with('new_transaction_id', $transaction->id);
     }
 
-    public function showPdf(Transaction $transaction)
+    public function showPdf($id)
     {
+        $transaction = Transaction::withTrashed()->findOrFail($id);
         $transaction->load(['client', 'user', 'installments.paymentPlan.lot', 'installments.paymentPlan.service']);
         
         $pdf = PDF::loadView('transactions.pdf', compact('transaction'));

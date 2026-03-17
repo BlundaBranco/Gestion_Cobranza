@@ -3,6 +3,7 @@
     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
             <th scope="col" class="px-6 py-3">Cliente</th>
+            <th scope="col" class="px-6 py-3">MZ</th>
             <th scope="col" class="px-6 py-3">Lote</th>
             <th scope="col" class="px-6 py-3"># Cuota</th>
             <th scope="col" class="px-6 py-3">Vencimiento</th>
@@ -29,6 +30,9 @@
                 <tr class="bg-white border-b hover:bg-gray-50">
                     <td class="px-6 py-4 font-medium text-gray-900">
                         {{ $installment->paymentPlan->lot->client->name ?? 'N/A' }}
+                    </td>
+                    <td class="px-6 py-4 text-gray-600">
+                        {{ $installment->paymentPlan->lot->block_number ?? 'N/A' }}
                     </td>
                     <td class="px-6 py-4 text-gray-600">
                         {{ $installment->paymentPlan->lot->identifier ?? 'N/A' }}
@@ -58,7 +62,7 @@
             @endif
         @empty
             <tr>
-                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
                     <p>No hay cuotas vencidas.</p>
                 </td>
             </tr>

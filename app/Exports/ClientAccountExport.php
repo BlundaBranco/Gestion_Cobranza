@@ -20,64 +20,59 @@ class ClientAccountExport implements FromView, ShouldAutoSize, WithStyles
 
     public function view(): View
     {
-        // 1. Cargar relaciones necesarias
         $this->client->load([
             'lots.paymentPlans.service',
             'lots.paymentPlans.installments.transactions',
         ]);
 
-        // 2. Estructura de sumatoria: [Moneda][Servicio] = [totales]
-        $summary = [];
+        // Per-lot summaries: [lot_id][currency] = [totals]
+        $lotSummaries = [];
 
         foreach ($this->client->lots as $lot) {
+            $lotSummaries[$lot->id] = [];
+
             foreach ($lot->paymentPlans as $plan) {
                 $currency = $plan->currency ?? 'MXN';
-                $serviceName = $plan->service->name ?? 'General';
 
-                if (!isset($summary[$currency][$serviceName])) {
-                    $summary[$currency][$serviceName] = [
-                        'debt_capital' => 0,
-                        'debt_interest' => 0,
-                        'total_debt' => 0,
-                        'paid_capital' => 0,
-                        'paid_interest' => 0,
-                        'total_paid' => 0,
-                        'total_plan_original' => 0
+                if (!isset($lotSummaries[$lot->id][$currency])) {
+                    $lotSummaries[$lot->id][$currency] = [
+                        'debt_capital'            => 0,
+                        'debt_interest'           => 0,
+                        'total_debt'              => 0,
+                        'paid_capital'            => 0,
+                        'paid_interest'           => 0,
+                        'total_paid'              => 0,
+                        'total_from_installments' => 0,
                     ];
                 }
 
-                $summary[$currency][$serviceName]['total_plan_original'] += $plan->total_amount;
-
                 foreach ($plan->installments as $installment) {
-                    $baseAmount = $installment->amount ?? $installment->base_amount;
-                    $interestAmount = $installment->interest_amount;
-                    $totalAmount = $baseAmount + $interestAmount;
-                    
-                    $totalPaidForInstallment = $installment->transactions->sum('pivot.amount_applied');
+                    $base     = $installment->amount ?? $installment->base_amount;
+                    $interest = $installment->interest_amount;
+                    $paid     = $installment->transactions->sum('pivot.amount_applied');
 
-                    // Cálculo de lo pagado (Interés primero)
-                    $paidInterest = min($totalPaidForInstallment, $interestAmount);
-                    $paidCapital = $totalPaidForInstallment - $paidInterest;
+                    $lotSummaries[$lot->id][$currency]['total_from_installments'] += $base;
 
-                    $summary[$currency][$serviceName]['paid_interest'] += $paidInterest;
-                    $summary[$currency][$serviceName]['paid_capital'] += $paidCapital;
-                    $summary[$currency][$serviceName]['total_paid'] += $totalPaidForInstallment;
+                    $paidInterest = min($paid, $interest);
+                    $paidCapital  = $paid - $paidInterest;
 
-                    // Cálculo de deuda
-                    $remainingTotal = $totalAmount - $totalPaidForInstallment;
+                    $lotSummaries[$lot->id][$currency]['paid_interest'] += $paidInterest;
+                    $lotSummaries[$lot->id][$currency]['paid_capital']  += $paidCapital;
+                    $lotSummaries[$lot->id][$currency]['total_paid']    += $paid;
 
-                    if ($remainingTotal > 0.005) {
-                        $summary[$currency][$serviceName]['debt_interest'] += ($interestAmount - $paidInterest);
-                        $summary[$currency][$serviceName]['debt_capital'] += ($baseAmount - $paidCapital);
-                        $summary[$currency][$serviceName]['total_debt'] += $remainingTotal;
+                    $remaining = ($base + $interest) - $paid;
+                    if ($remaining > 0.005) {
+                        $lotSummaries[$lot->id][$currency]['debt_interest'] += ($interest - $paidInterest);
+                        $lotSummaries[$lot->id][$currency]['debt_capital']  += ($base - $paidCapital);
+                        $lotSummaries[$lot->id][$currency]['total_debt']    += $remaining;
                     }
                 }
             }
         }
 
         return view('exports.client-account', [
-            'client' => $this->client,
-            'summary' => $summary
+            'client'       => $this->client,
+            'lotSummaries' => $lotSummaries,
         ]);
     }
 
