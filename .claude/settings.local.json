@@ -13,7 +13,11 @@
       "Bash(tasklist:*)",
       "Bash(\"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe\" -u root -e \"SHOW DATABASES;\" 2>&1)",
       "Bash(sleep:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(/c/xampp/php/php artisan:*)",
+      "Bash(/c/xampp/php/php -l app/Http/Controllers/TransactionController.php app/Models/CreditBalanceMovement.php app/Http/Controllers/Api/ClientInstallmentController.php)",
+      "Bash(/c/xampp/php/php -l app/Models/CreditBalanceMovement.php)",
+      "Bash(/c/xampp/php/php -l app/Http/Controllers/Api/ClientInstallmentController.php)"
     ]
   }
 }
