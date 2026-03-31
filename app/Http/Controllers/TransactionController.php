@@ -7,9 +7,11 @@ use App\Models\Installment;
 use App\Models\Transaction;
 use App\Models\Owner;
 use App\Models\OwnerSequence;
+use App\Exports\TransactionHistoryExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
@@ -35,8 +37,17 @@ class TransactionController extends Controller
 
         $transactions = $query->latest()->paginate(15)->withQueryString();
         $owners = Owner::orderBy('name')->get();
-        
+
         return view('transactions.index', compact('transactions', 'owners'));
+    }
+
+    public function export(Request $request)
+    {
+        $filename = 'historial-pagos-' . now()->format('Y-m-d') . '.xlsx';
+        return Excel::download(
+            new TransactionHistoryExport($request->search, $request->owner_id),
+            $filename
+        );
     }
 
     public function update(Request $request, Transaction $transaction)
