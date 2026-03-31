@@ -32,9 +32,6 @@ class ClientInstallmentController extends Controller
             return $installment->remaining_balance > 0.005;
         });
 
-        return response()->json([
-            'installments'   => $pendingInstallments->values(),
-            'credit_balance' => (float) $client->credit_balance,
-        ]);
+        return response()->json($pendingInstallments->values());
     }
 }

@@ -91,7 +91,6 @@
                                 Del {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}
                             </p>
                         </div>
-                        @if(auth()->user()->isAdmin())
                         <div class="text-left md:text-right">
                             <p class="text-sm text-gray-600 mb-1 font-medium">Total Ingresado</p>
                             <div class="flex flex-col gap-1 md:items-end">
@@ -104,7 +103,6 @@
                                 @endforelse
                             </div>
                         </div>
-                        @endif
                     </div>
                 </div>
 

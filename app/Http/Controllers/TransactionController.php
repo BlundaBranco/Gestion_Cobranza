@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
-use App\Models\CreditBalanceMovement;
 use App\Models\Installment;
 use App\Models\Transaction;
 use App\Models\Owner;
@@ -88,37 +87,28 @@ class TransactionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'client_id'     => 'required|exists:clients,id',
-            'amount_paid'   => 'required|numeric|min:0',
-            'payment_date'  => 'required|date',
-            'notes'         => 'nullable|string',
-            'installments'  => 'required|array',
-            'installments.*'=> 'exists:installments,id',
-            'apply_credit'  => 'nullable|boolean',
-            'excess_action' => 'nullable|in:credit,none',
+            'client_id' => 'required|exists:clients,id',
+            'amount_paid' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'notes' => 'nullable|string',
+            'installments' => 'required|array',
+            'installments.*' => 'exists:installments,id',
         ]);
 
-        $cashAmount           = floatval($validated['amount_paid']);
-        $applyCredit          = $request->boolean('apply_credit');
-        $excessAction         = $validated['excess_action'] ?? 'none';
+        $amountPaid = floatval($validated['amount_paid']);
         $selectedInstallments = Installment::with('transactions')->find($validated['installments']);
-        $client               = Client::findOrFail($validated['client_id']);
-        $creditToApply        = $applyCredit ? (float) $client->credit_balance : 0;
-        $amountToApply        = $cashAmount + $creditToApply;
-        $transaction          = null;
-
-        if ($amountToApply < 0.01) {
-            return back()->with('error', 'El monto total a aplicar debe ser mayor a cero.')->withInput();
-        }
+        $client = Client::findOrFail($validated['client_id']);
+        $amountToApply = $amountPaid;
+        $transaction = null;
 
         try {
             DB::beginTransaction();
 
             $transaction = $client->transactions()->create([
-                'amount_paid'  => $cashAmount,
+                'amount_paid' => $amountToApply,
                 'payment_date' => $validated['payment_date'],
-                'notes'        => $validated['notes'],
-                'user_id'      => auth()->id(),
+                'notes' => $validated['notes'],
+                'user_id' => auth()->id(),
             ]);
 
             $installmentsToProcess = $selectedInstallments->sortBy('due_date');
@@ -126,9 +116,11 @@ class TransactionController extends Controller
             foreach ($installmentsToProcess as $installment) {
                 if ($amountToApply <= 0) break;
 
-                $paidSoFar      = $installment->transactions->sum('pivot.amount_applied');
-                $totalValue     = ($installment->amount ?? $installment->base_amount) + $installment->interest_amount;
+                // --- LÓGICA DE PAGO ACTUALIZADA ---
+                $paidSoFar = $installment->transactions->sum('pivot.amount_applied');
+                $totalValue = ($installment->amount ?? $installment->base_amount) + $installment->interest_amount;
                 $remainingBalance = $totalValue - $paidSoFar;
+                // --- FIN DE ACTUALIZACIÓN ---
 
                 $amountForThisInstallment = min($amountToApply, $remainingBalance);
 
@@ -144,41 +136,6 @@ class TransactionController extends Controller
 
                 $amountToApply -= $amountForThisInstallment;
             }
-
-            // --- SALDO A FAVOR ---
-            // Determine how much credit was actually consumed
-            // (cash is applied first; credit is only used for what cash didn't cover)
-            $creditConsumed = max(0, $creditToApply - $amountToApply);
-            $cashExcess     = max(0, $amountToApply - $creditToApply); // excess from cash only
-
-            if ($creditConsumed > 0.005) {
-                $client->credit_balance -= $creditConsumed;
-                CreditBalanceMovement::create([
-                    'client_id'      => $client->id,
-                    'amount'         => -$creditConsumed,
-                    'type'           => 'applied',
-                    'transaction_id' => $transaction->id,
-                    'notes'          => 'Saldo a favor aplicado al pago ' . ($transaction->folio_number ?? ''),
-                    'created_by'     => auth()->id(),
-                ]);
-            }
-
-            if ($excessAction === 'credit' && $cashExcess > 0.005) {
-                $client->credit_balance += $cashExcess;
-                CreditBalanceMovement::create([
-                    'client_id'      => $client->id,
-                    'amount'         => $cashExcess,
-                    'type'           => 'added',
-                    'transaction_id' => $transaction->id,
-                    'notes'          => 'Excedente de pago registrado como saldo a favor',
-                    'created_by'     => auth()->id(),
-                ]);
-            }
-
-            if ($creditConsumed > 0.005 || ($excessAction === 'credit' && $cashExcess > 0.005)) {
-                $client->save();
-            }
-            // --- FIN SALDO A FAVOR ---
 
             // --- LÓGICA DE FOLIO MULTI-EMISOR ---
             // Debe ejecutarse DENTRO de la transacción DB para que lockForUpdate sea efectivo.
