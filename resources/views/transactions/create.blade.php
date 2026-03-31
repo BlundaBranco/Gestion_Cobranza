@@ -121,9 +121,9 @@
                                         </thead>
                                         <tbody class="divide-y divide-gray-100">
                                             <template x-for="inst in filteredInstallments" :key="inst.id">
-                                                <tr class="hover:bg-indigo-50 transition-colors duration-150 cursor-pointer" @click="$el.querySelector('input[type=checkbox]').click()">
+                                                <tr class="hover:bg-indigo-50 transition-colors duration-150 cursor-pointer" @click="if ($event.target.type !== 'checkbox') { $el.querySelector('input[type=checkbox]').click() }">
                                                     <td class="p-4 text-center">
-                                                        <input type="checkbox" name="installments[]" :value="inst.id" x-model="selectedInstallments" @click.stop @change="updateTotal()" class="w-5 h-5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-all duration-200">
+                                                        <input type="checkbox" name="installments[]" :value="inst.id" x-model="selectedInstallments" @change="updateTotal()" class="w-5 h-5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-all duration-200">
                                                     </td>
                                                     <td class="p-4 text-gray-900 font-medium" x-text="`${inst.payment_plan.service.name} (${inst.payment_plan.lot.identifier})`"></td>
                                                     <td class="p-4 text-center">
