@@ -5,13 +5,13 @@
     <title>Recibo de Pago - {{ $transaction->folio_number }}</title>
     <style>
         @page { margin: 25px; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 13px; color: #333; }
+        body { font-family: 'Helvetica', sans-serif; font-size: 11px; color: #333; }
         
-        .receipt-box {
-            border: 2px solid #000;
-            padding: 15px;
-            min-height: 480px;
-            position: relative;
+        .receipt-box { 
+            border: 2px solid #000; 
+            padding: 15px; 
+            height: 480px; 
+            position: relative; 
         }
         
         /* Header */
@@ -27,15 +27,15 @@
         .data-table td { padding: 5px 4px; border-bottom: 1px solid #666; vertical-align: top; }
         
         .label { font-weight: bold; width: 110px; }
-        .content { font-family: 'Courier New', Courier, monospace; font-weight: bold; font-size: 13px; }
+        .content { font-family: 'Courier New', Courier, monospace; font-weight: bold; font-size: 12px; }
         
         /* Tabla de Ubicación (Lote/Mz) */
         .lote-table { width: 100%; margin-top: 8px; border-collapse: collapse; }
-        .lote-table td { border: 1px solid #666; text-align: center; padding: 3px; font-size: 11px; font-family: 'Helvetica', sans-serif; font-weight: bold; }
+        .lote-table td { border: 1px solid #666; text-align: center; padding: 3px; font-size: 10px; font-family: 'Helvetica', sans-serif; font-weight: bold; }
         .lote-header { background-color: #f0f0f0; }
 
         /* Tabla de Desglose (Capital vs Interés) */
-        .breakdown-table { width: 100%; margin-bottom: 5px; border-collapse: collapse; font-size: 11px; }
+        .breakdown-table { width: 100%; margin-bottom: 5px; border-collapse: collapse; font-size: 10px; }
         .breakdown-table th { border-bottom: 1px dashed #999; text-align: left; padding: 2px; color: #555; }
         .breakdown-table td { padding: 2px; font-family: 'Courier New', Courier, monospace; }
         .row-border { border-bottom: 1px dotted #ccc; }
@@ -75,10 +75,6 @@
 
         // Lógica de ajuste de fuente: Si el texto es largo o hay muchas cuotas, reducir fuente
         $conceptStyle = (strlen($conceptoTexto) > 80 || $installments->count() > 4) ? 'font-size: 10px;' : '';
-
-        // Anticipo: excedente no aplicado a ninguna cuota
-        $totalApplied = $installments->sum(fn($i) => (float) $i->pivot->amount_applied);
-        $anticipo = round((float) $transaction->amount_paid - $totalApplied, 2);
     @endphp
 
     <div class="receipt-box">
@@ -117,6 +113,9 @@
                     <td class="label">Recibí de:</td>
                     <td class="content" style="text-transform: uppercase;">
                         {{ $transaction->client->name }}
+                        @if($transaction->client->phone)
+                           <span style="font-size: 10px; font-weight: normal; margin-left:10px;">({{ $transaction->client->phone }})</span>
+                        @endif
                     </td>
                 </tr>
                 <tr>
@@ -161,14 +160,6 @@
                                         <td style="text-align: right;">{{ format_currency($applied, $currency) }}</td>
                                     </tr>
                                 @endforeach
-                                @if($anticipo > 0.01)
-                                    <tr class="row-border" style="font-style: italic; color: #555;">
-                                        <td>Abono a cuenta (Anticipo)</td>
-                                        <td>—</td>
-                                        <td>—</td>
-                                        <td style="text-align: right;">{{ format_currency($anticipo, $currency) }}</td>
-                                    </tr>
-                                @endif
                             </tbody>
                         </table>
 
