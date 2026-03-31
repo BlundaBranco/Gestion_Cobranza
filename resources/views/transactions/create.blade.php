@@ -10,6 +10,18 @@
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl border border-gray-100">
                 <form method="POST" action="{{ route('transactions.store') }}">
                     @csrf
+
+                    @if ($errors->any())
+                        <div class="mx-8 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-sm font-semibold text-red-800">No se pudo registrar el pago:</p>
+                            <ul class="mt-1 text-sm text-red-700 list-disc list-inside">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div class="p-8 md:p-10"
                          x-data="paymentForm" x-init="init()">
 
@@ -280,9 +292,12 @@
                     this.applyCredit = false;
 
                     fetch(`/clients/${this.clientId}/pending-installments`)
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) throw new Error('Error al cargar cuotas (HTTP ' + response.status + ')');
+                            return response.json();
+                        })
                         .then(data => {
-                            this.installments    = data.installments;
+                            this.installments    = Array.isArray(data.installments) ? data.installments : [];
                             this.creditBalance   = data.credit_balance || 0;
                             this.loading         = false;
 
@@ -292,6 +307,10 @@
                             }
 
                             this.updateTotal();
+                        })
+                        .catch(err => {
+                            this.loading = false;
+                            alert('No se pudieron cargar las cuotas. Recargá la página e intentá de nuevo.\n\nDetalle: ' + err.message);
                         });
                 },
 
@@ -344,8 +363,8 @@
                 get groupedInstallments() {
                     const result = [];
                     const seen   = new Set();
-                    this.filteredInstallments.forEach(inst => {
-                        const key = inst.payment_plan.lot.identifier;
+                    (this.filteredInstallments || []).forEach(inst => {
+                        const key = inst.payment_plan?.lot?.identifier ?? 'Sin lote';
                         if (!seen.has(key)) {
                             seen.add(key);
                             result.push({ _isHeader: true, _label: key, _id: 'hdr-' + key });
