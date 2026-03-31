@@ -10,7 +10,25 @@
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl border border-gray-100">
                 <form method="POST" action="{{ route('transactions.store') }}">
                     @csrf
-                    <div class="p-8 md:p-10" 
+
+                    @if ($errors->any())
+                        <div class="mx-8 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-sm font-semibold text-red-800">No se pudo registrar el pago:</p>
+                            <ul class="mt-1 text-sm text-red-700 list-disc list-inside">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="mx-8 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-sm text-red-700">{{ session('error') }}</p>
+                        </div>
+                    @endif
+
+                    <div class="p-8 md:p-10"
                          x-data="paymentForm" x-init="init()">
                         
                         <!-- Header Section -->
