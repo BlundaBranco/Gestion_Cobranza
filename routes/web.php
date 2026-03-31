@@ -95,7 +95,9 @@ Route::middleware('auth')->group(function () {
 
     // --- ADMINISTRACIÓN DE USUARIOS (solo admin) ---
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.update-password');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
 });
 
