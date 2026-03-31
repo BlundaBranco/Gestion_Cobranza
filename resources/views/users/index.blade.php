@@ -13,7 +13,7 @@
         </div>
     </x-slot>
 
-    <div class="py-8">
+    <div class="py-8" x-data="{ showCreate: false }">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
 
             @if (session('success'))
@@ -22,9 +22,64 @@
                 </div>
             @endif
 
+            @if ($errors->any())
+                <div class="mb-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm">
+                    <ul class="list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-                <div class="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+                <div class="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900">Usuarios del sistema</h3>
+                    <button @click="showCreate = true" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Nuevo Usuario
+                    </button>
+                </div>
+
+                <!-- Modal crear usuario -->
+                <div x-show="showCreate" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6" @click.outside="showCreate = false">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Nuevo Usuario</h3>
+                        <form method="POST" action="{{ route('users.store') }}" class="space-y-4">
+                            @csrf
+                            <div>
+                                <x-input-label value="Nombre completo" class="text-sm" />
+                                <x-text-input name="name" type="text" class="mt-1 block w-full text-sm" :value="old('name')" required />
+                            </div>
+                            <div>
+                                <x-input-label value="Username" class="text-sm" />
+                                <x-text-input name="username" type="text" class="mt-1 block w-full text-sm" :value="old('username')" required />
+                            </div>
+                            <div>
+                                <x-input-label value="Email" class="text-sm" />
+                                <x-text-input name="email" type="email" class="mt-1 block w-full text-sm" :value="old('email')" required />
+                            </div>
+                            <div>
+                                <x-input-label value="Contraseña" class="text-sm" />
+                                <x-text-input name="password" type="password" class="mt-1 block w-full text-sm" placeholder="Mínimo 6 caracteres" required />
+                            </div>
+                            <div>
+                                <x-input-label value="Confirmar contraseña" class="text-sm" />
+                                <x-text-input name="password_confirmation" type="password" class="mt-1 block w-full text-sm" required />
+                            </div>
+                            <div>
+                                <x-input-label value="Rol" class="text-sm" />
+                                <select name="role" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500" required>
+                                    <option value="user">Usuario</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="flex justify-end gap-3 pt-2">
+                                <button type="button" @click="showCreate = false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+                                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">Crear Usuario</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <div class="divide-y divide-gray-100">
@@ -40,6 +95,13 @@
                                     </span>
                                 </div>
 
+                                <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+                                @if ($user->id !== auth()->id())
+                                <form method="POST" action="{{ route('users.destroy', $user) }}" onsubmit="return confirm('¿Eliminar usuario {{ $user->name }}?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium rounded-lg transition border border-red-200">Eliminar</button>
+                                </form>
+                                @endif
                                 <form method="POST" action="{{ route('users.update-password', $user) }}"
                                       class="flex flex-col sm:flex-row gap-2 sm:items-end"
                                       x-data="{ loading: false }" @submit="loading = true">
@@ -82,6 +144,7 @@
                             @if ($errors->any() && old('_user_id') == $user->id)
                                 <p class="mt-2 text-sm text-red-600">{{ $errors->first('password') }}</p>
                             @endif
+                        </div>
                         </div>
                     @endforeach
                 </div>
