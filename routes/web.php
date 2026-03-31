@@ -75,6 +75,8 @@ Route::middleware('auth')->group(function () {
     // --- TRANSACCIONES ---
     // PDF del Recibo
     Route::get('transactions/{transaction}/pdf', [TransactionController::class, 'showPdf'])->name('transactions.pdf');
+    // Exportar historial a Excel
+    Route::get('transactions/export', [TransactionController::class, 'export'])->name('transactions.export');
     
     // Resource: Habilitamos index, create, store, update y destroy.
     // show y edit no se usan (se usa pdf y modales/inline).
