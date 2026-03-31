@@ -123,7 +123,7 @@
                                             <template x-for="inst in filteredInstallments" :key="inst.id">
                                                 <tr class="hover:bg-indigo-50 transition-colors duration-150 cursor-pointer" @click="$el.querySelector('input[type=checkbox]').click()">
                                                     <td class="p-4 text-center">
-                                                        <input type="checkbox" name="installments[]" :value="inst.id" x-model="selectedInstallments" @change="updateTotal()" class="w-5 h-5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-all duration-200">
+                                                        <input type="checkbox" name="installments[]" :value="inst.id" x-model="selectedInstallments" @click.stop @change="updateTotal()" class="w-5 h-5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-all duration-200">
                                                     </td>
                                                     <td class="p-4 text-gray-900 font-medium" x-text="`${inst.payment_plan.service.name} (${inst.payment_plan.lot.identifier})`"></td>
                                                     <td class="p-4 text-center">
@@ -223,17 +223,24 @@
                     this.searchQuery = ''; // Limpiar búsqueda al cambiar de cliente
                     
                     fetch(`/clients/${this.clientId}/pending-installments`)
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) throw new Error('HTTP ' + response.status);
+                            return response.json();
+                        })
                         .then(data => {
-                            this.installments = data;
+                            this.installments = Array.isArray(data) ? data : [];
                             this.loading = false;
-                            
+
                             const preselectedId = '{{ $selectedInstallmentId ?? '' }}';
                             if (preselectedId && this.installments.some(inst => inst.id == preselectedId)) {
                                 this.selectedInstallments.push(preselectedId);
                             }
-                            
+
                             this.updateTotal();
+                        })
+                        .catch(err => {
+                            this.loading = false;
+                            alert('Error al cargar las cuotas: ' + err.message + '. Recargá la página e intentá de nuevo.');
                         });
                 },
 
