@@ -18,7 +18,7 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Transaction::with(['client', 'installments.paymentPlan.lot.owner']);
+        $query = Transaction::withTrashed()->with(['client', 'installments.paymentPlan.lot.owner']);
 
         if ($request->filled('search')) {
             $searchTerm = '%' . $request->search . '%';

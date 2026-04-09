@@ -67,7 +67,11 @@
                             <div>
                                 <x-input-label for="payment_date" value="Fecha de Pago" class="text-sm font-semibold text-gray-700" />
                                 <div class="mt-2">
-                                    <x-text-input id="payment_date" name="payment_date" type="date" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200" value="{{ date('Y-m-d') }}" required />
+                                    @if(auth()->user()->isAdmin())
+                                        <x-text-input id="payment_date" name="payment_date" type="date" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200" value="{{ date('Y-m-d') }}" required />
+                                    @else
+                                        <x-text-input id="payment_date" name="payment_date" type="date" class="block w-full rounded-lg border-gray-300 shadow-sm bg-gray-100 cursor-not-allowed pointer-events-none text-gray-500" value="{{ date('Y-m-d') }}" readonly required />
+                                    @endif
                                 </div>
                             </div>
                         </div>
