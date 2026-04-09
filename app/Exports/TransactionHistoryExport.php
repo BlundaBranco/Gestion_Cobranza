@@ -24,7 +24,7 @@ class TransactionHistoryExport implements FromQuery, WithHeadings, WithMapping, 
 
     public function query()
     {
-        $query = Transaction::with([
+        $query = Transaction::withTrashed()->with([
             'client',
             'installments.paymentPlan.lot',
             'installments.transactions',
