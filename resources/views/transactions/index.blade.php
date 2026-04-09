@@ -99,7 +99,7 @@
                                 @php
                                     $ownerName = $transaction->installments->first()->paymentPlan->lot->owner->name ?? 'N/A';
                                 @endphp
-                                <tr class="hover:bg-blue-50 transition-colors duration-150">
+                                <tr class="{{ $transaction->trashed() ? 'bg-red-50 text-gray-400' : 'hover:bg-blue-50' }} transition-colors duration-150">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-2">
                                             <div class="p-1.5 bg-blue-100 rounded-lg shadow-sm">
@@ -107,7 +107,10 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                 </svg>
                                             </div>
-                                            <span class="font-semibold text-gray-900">{{ $transaction->folio_number }}</span>
+                                            <span class="{{ $transaction->trashed() ? 'font-semibold text-gray-400' : 'font-semibold text-gray-900' }}">{{ $transaction->folio_number }}</span>
+                                            @if($transaction->trashed())
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-300">CANCELADO</span>
+                                            @endif
                                         </div>
                                     </td>
                                     <td class="px-6 py-4">
@@ -148,7 +151,7 @@
                                             </a>
 
                                             {{-- Botón Eliminar (Solo Admin) --}}
-                                            @if(auth()->user()->role === 'admin')
+                                            @if(auth()->user()->role === 'admin' && !$transaction->trashed())
                                                 <form action="{{ route('transactions.destroy', $transaction) }}" method="POST" onsubmit="return confirm('¿Eliminar este pago? Se revertirá el saldo de las cuotas.');" class="inline-block">
                                                     @csrf
                                                     @method('DELETE')
