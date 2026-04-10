@@ -20,6 +20,15 @@ class OwnerTransferController extends Controller
                 return back()->with('error', 'El lote ya pertenece a este socio.');
             }
 
+            // Bloquear cambio si el lote ya tiene transacciones registradas
+            $hasTransactions = $lot->paymentPlans()
+                ->whereHas('installments.transactions')
+                ->exists();
+
+            if ($hasTransactions) {
+                return back()->with('error', 'No se puede cambiar el socio de este lote porque ya tiene pagos registrados. Contacte al administrador si necesita hacer esta corrección.');
+            }
+
             // Asignación directa y guardado explícito para evitar fallos de Mass Assignment
             $lot->owner_id = $newOwnerId;
             $lot->save();

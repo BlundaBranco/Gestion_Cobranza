@@ -18,7 +18,7 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Transaction::withTrashed()->with(['client', 'installments.paymentPlan.lot.owner']);
+        $query = Transaction::withTrashed()->with(['client', 'owner', 'installments.paymentPlan']);
 
         if ($request->filled('search')) {
             $searchTerm = '%' . $request->search . '%';
@@ -29,10 +29,7 @@ class TransactionController extends Controller
         }
 
         if ($request->filled('owner_id')) {
-            $ownerId = $request->owner_id;
-            $query->whereHas('installments.paymentPlan.lot', function ($q) use ($ownerId) {
-                $q->where('owner_id', $ownerId);
-            });
+            $query->where('owner_id', $request->owner_id);
         }
 
         $transactions = $query->latest()->paginate(15)->withQueryString();
@@ -168,6 +165,8 @@ class TransactionController extends Controller
             }
             // --- FIN LÓGICA DE FOLIO MULTI-EMISOR ---
 
+            // Guardar el owner al momento de creación para mantener trazabilidad histórica
+            $transaction->owner_id = $ownerId;
             $transaction->save();
 
             DB::commit();
