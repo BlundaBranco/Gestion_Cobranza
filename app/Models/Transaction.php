@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Owner;
 use App\Models\User;
 
 class Transaction extends Model
@@ -13,6 +14,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'client_id',
+        'owner_id',
         'user_id',
         'amount_paid',
         'payment_date',
@@ -28,6 +30,11 @@ class Transaction extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(Owner::class);
     }
 
     public function installments()

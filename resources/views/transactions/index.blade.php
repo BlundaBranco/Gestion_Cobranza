@@ -97,7 +97,9 @@
                         <tbody class="divide-y divide-gray-100">
                             @forelse($transactions as $transaction)
                                 @php
-                                    $ownerName = $transaction->installments->first()->paymentPlan->lot->owner->name ?? 'N/A';
+                                    $ownerName = $transaction->owner->name
+                                        ?? optional(optional(optional($transaction->installments->first())->paymentPlan)->lot)->owner->name
+                                        ?? 'N/A';
                                 @endphp
                                 <tr class="{{ $transaction->trashed() ? 'bg-red-50 text-gray-400' : 'hover:bg-blue-50' }} transition-colors duration-150">
                                     <td class="px-6 py-4">

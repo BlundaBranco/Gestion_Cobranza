@@ -26,6 +26,7 @@ class TransactionHistoryExport implements FromQuery, WithHeadings, WithMapping, 
     {
         $query = Transaction::withTrashed()->with([
             'client',
+            'owner',
             'installments.paymentPlan.lot',
             'installments.transactions',
         ]);
@@ -37,7 +38,7 @@ class TransactionHistoryExport implements FromQuery, WithHeadings, WithMapping, 
         }
 
         if ($this->ownerId) {
-            $query->whereHas('installments.paymentPlan.lot', fn($q) => $q->where('owner_id', $this->ownerId));
+            $query->where('owner_id', $this->ownerId);
         }
 
         return $query->latest();
@@ -56,6 +57,7 @@ class TransactionHistoryExport implements FromQuery, WithHeadings, WithMapping, 
         $firstInstallment = $transaction->installments->first();
         $currency = $firstInstallment?->paymentPlan->currency ?? 'MXN';
         $lot      = $firstInstallment?->paymentPlan->lot ?? null;
+        $ownerName = $transaction->owner->name ?? ($lot?->owner->name ?? 'N/A');
 
         foreach ($transaction->installments as $installment) {
             $interestAmount = (float) $installment->interest_amount;
