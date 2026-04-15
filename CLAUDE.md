@@ -1,134 +1,88 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guía para trabajar en este repo. Si crece, compactar — mantener ≤100 líneas.
 
-## Project
+## Proyecto
 
-Sistema de Gestión de Cobranza Inmobiliaria — SaaS web app for real estate sales financing and collection management. Replaces manual Excel workflows with automated payment plans, interest tracking, folio/receipt generation, and income reports.
+SaaS de gestión de cobranza inmobiliaria (cliente: **Yanet**). Planes de pago, cuotas, folios por socio, reportes de ingresos. En producción en `gestioncobranza.duckdns.org`.
 
 ## Stack
 
-- **Backend:** Laravel 12 (PHP 8.2+), Eloquent ORM, Laravel Breeze (auth)
-- **Frontend:** Blade + Alpine.js (reactivity), Tailwind CSS 3, Vite
-- **DB:** SQLite (local/demo) or MySQL (production)
-- **PDF:** barryvdh/laravel-dompdf
-- **Excel:** Maatwebsite Excel 4
-- **Testing:** PHPUnit 11
+Laravel 12 (PHP 8.2+), Blade + Alpine.js + Tailwind 3, SQLite local / MySQL prod, barryvdh/laravel-dompdf, Maatwebsite/Excel 4, PHPUnit 11. DB driver para sessions/cache/queue. Sin Redis.
 
-## Commands
+## Comandos
 
 ```bash
-# Development (runs artisan serve + queue + logs + vite concurrently)
-composer run dev
-
-# Or separately
-php artisan serve
-npm run dev
-
-# Build for production
-npm run build
-
-# Migrate & seed
+composer run dev           # artisan serve + queue + logs + vite
+npm run build              # build prod
 php artisan migrate --seed
-
-# Tests
-composer test
-# or
-php artisan test
-
-# Single test
-php artisan test --filter=TestClassName
-
-# Code style
-./vendor/bin/pint
+php artisan test [--filter=Name]
 ```
 
-## Architecture
-
-### Core Domain Model
+## Arquitectura (resumen)
 
 ```
-Owner (Socio) ──< Lot ──< PaymentPlan ──< Installment
-                              │
-                              └──< Transaction (Pago/Folio) >── Installment (pivot: amount_applied)
+Owner ──< Lot ──< PaymentPlan ──< Installment
+                      └──< Transaction >── Installment (pivot: amount_applied)
 Client ──< Lot
 ```
 
-- **Owner (Socio):** Property partner. Has own folio sequence (`sequence` field). Revenue isolated per owner in reports.
-- **Lot (Lote):** Property identified by `block_number` + `lot_number`. Has `LotOwnershipHistory` for transfers.
-- **PaymentPlan:** Financing structure (enganche + cuotas, currency, start_date). Auto-generates Installments on creation.
-- **Installment (Cuota):** Individual payment with `due_date`, `status` (pendiente/pagada/vencida/condonada), `interest_amount`, `months_overdue`.
-- **Transaction:** A payment (folio). Applies to multiple installments via pivot table. PDF folio auto-generated with owner-specific sequence.
+- **Folios por Owner** con `OwnerSequence::getNextValue()` + `lockForUpdate()` dentro de `DB::transaction`.
+- **Interés:** 10% mensual sobre cuotas vencidas, persistido en `installments.interest_amount`.
+- **owner_id en transactions** = snapshot al crear (no derivar por JOIN).
+- **SoftDeletes en Transaction:** al cancelar, `updateExistingPivot(amount_applied=0)` — **nunca `detach()`**.
 
-### Multi-Owner Access Control
+Ver `docs/ARCHITECTURE.md` y `docs/SPEC.md` para detalle completo.
 
-Users belong to Owners via `owner_user` pivot. Views/reports filter by owner. Policies enforce per-resource authorization.
+## Reglas críticas — NUNCA
 
-### Financial Logic (Critical Area)
+- **NUNCA** `php artisan route:cache` en prod — rompe rutas bajo FPM.
+- **NUNCA** deploy de código que referencia migraciones sin correr `migrate --force` primero.
+- **NUNCA** `detach()` en pivot `installment_transaction` al cancelar.
+- **NUNCA** generar folio fuera de `DB::transaction`.
+- **NUNCA** configurar Pint hooks ni auto-format — el usuario quiere diffs mínimos.
+- **NUNCA** mencionar el uso de IA al cliente. El usuario se presenta como ingeniero senior.
+- **NUNCA** guardar credenciales (passwords, tokens) en archivos commiteados o en memoria persistente.
 
-- **Interest:** 10% monthly on overdue installments. Calculated and updated via scheduled job / Artisan commands.
-- **Partial payments:** `transactions_installments` pivot stores `amount_applied` per installment.
-- **Folios:** Sequential per Owner (not global). Tracked in `owners.sequence`.
-- **Months overdue:** Tracked on installments for display and interest calculation.
+## Deploy a producción
 
-### Key Controllers
+SSH key ya autorizada para `testuser@137.184.38.230`. Deploy manual por el usuario:
 
-| Controller | Responsibility |
-|---|---|
-| `TransactionController` | Register payments, generate PDF folios |
-| `InstallmentController` | CRUD cuotas, bulk update, condone interest |
-| `PaymentPlanController` | Create/edit plans, currency management |
-| `ReportController` | Income reports, overdue tracking, Excel exports |
-| `DashboardController` | Metrics, overdue alerts, recent activity |
+```bash
+ssh testuser@137.184.38.230
+cd /var/www/gestion_cobranza && git pull origin master && composer install --no-dev -o && sudo php artisan migrate --force && sudo php artisan optimize:clear && sudo php artisan view:clear
+```
 
-### Helpers (`app/Helpers/`)
-
-- `currency_format()` — format monetary values
-- `number_to_words_es()` — amounts to Spanish words (used in PDF folios)
-- WhatsApp message generator for payment reminders
-
-### Artisan Commands
-
-Located in `app/Console/Commands/` — used for data migrations and one-off fixes (installment date corrections, amount recalculations). Check before writing new migration logic.
-
-## Key Conventions
-
-- Alpine.js handles real-time calculations in forms (installment totals, payment distribution).
-- Select2 used for searchable dropdowns on large datasets (clients, lots).
-- Modals used for bulk installment updates and payment processing — state managed via Alpine.
-- Tailwind custom theme: `primary` (blue), `success` (green), `danger` (red), `warning` (yellow).
-- DB sessions and cache use database driver (no Redis).
-- Queue driver is `database` — jobs are not async by default.
-
-## Critical Rules — NEVER
-
-- **NUNCA** correr `php artisan route:cache` en producción — rompe rutas bajo FPM.
-- **NUNCA** deployar código que referencia migraciones sin correr `php artisan migrate` antes en prod.
-- **NUNCA** usar `detach()` en el pivot `installment_transaction` al cancelar una Transaction — usar `updateExistingPivot(amount_applied=0)` para preservar auditoría y cadena owner.
-- **NUNCA** generar folios fuera de `DB::transaction` — el `lockForUpdate()` en `OwnerSequence::getNextValue()` solo es efectivo dentro de la transacción.
-- **NUNCA** configurar Pint hooks o auto-format — el usuario quiere diffs mínimos y estrictos.
-- **NUNCA** deploy automático por SSH — dar los comandos al usuario para que los copie.
+- `git pull` SIN `sudo` (sino los archivos quedan como root y rompen pulls futuros).
+- `migrate --force` es obligatorio en prod (evita prompt interactivo).
 
 ## Negocio — contexto clave
 
-- Cliente: Yanet (comunicación en español, tono formal, nunca mencionar IA).
-- Folios son **por Owner**, no globales — colisiones entre secciones son normales.
-- Interés = 10% mensual sobre cuotas vencidas, acumulativo, persistido en `installments.interest_amount`.
-- Saldo a favor (`credit_balance`) está **en pausa** tras incidente 2026-03-30. No re-implementar sin análisis.
+- Cliente **Yanet**. Tono formal en español. Nunca bullets innecesarios en mensajes.
+- Tipos de transaction: `installment` (default) y `extra` (cobros sin descuento de deuda).
+- **Saldo a favor (`credit_balance`) está en PAUSA** tras incidente 2026-03-30. No re-implementar sin análisis.
 
-## Documentación
+## Convenciones
 
-- `docs/ARCHITECTURE.md` — diagrama de dominio, flujo de pago, decisiones arquitectónicas
-- `docs/SPEC.md` — especificación funcional completa con estado por feature
-- `tasks/todo.md` — tareas activas priorizadas
-- `tasks/lessons.md` — lecciones aprendidas (actualizar tras cada corrección)
+- Alpine.js para cálculos en vivo en formularios. Select2 para dropdowns grandes.
+- Modales para bulk updates y pagos — estado con Alpine.
+- Helpers: `currency_format()`, `number_to_words_es()`.
+- Null-safe `?->` en vistas/exports que infieren moneda desde `installments.first()` — puede no existir (tipo `extra`).
 
 ## Meta-reglas (NUNCA borrar)
 
-- Después de CUALQUIER corrección del usuario, actualizar `tasks/lessons.md` con una regla atómica.
-- Si la lección es convención o estilo, además actualizar este CLAUDE.md.
-- Antes de implementar algo que toque >3 archivos, escribir mini-spec y pedir confirmación.
-- Después de cada tarea completada, marcarla en `tasks/todo.md`.
-- Commits atómicos, en español, descriptivos. Sin prefijos convencionales salvo `Fix:` / `feat:` ya establecidos en el repo.
-- Si no estás seguro, PREGUNTÁ. No asumas.
-- Idioma: comunicación con el usuario en español, código/identifiers en inglés.
+- Toda corrección del usuario → agregar regla atómica a `tasks/lessons.md`.
+- Lección de convención → además actualizar este CLAUDE.md.
+- Cambio que toque >3 archivos → mini-spec y pedir confirmación antes.
+- Tarea completada → marcar en `tasks/todo.md`.
+- Commits atómicos, en español, sin prefijos convencionales (salvo `Fix:` / `feat:` del repo).
+- Si no estás seguro, PREGUNTÁ.
+- Comunicación con el usuario en español, código/identifiers en inglés.
+
+## Documentación
+
+- `docs/ARCHITECTURE.md` — diagrama de dominio, flujos, decisiones
+- `docs/SPEC.md` — spec funcional completa con estado por feature
+- `tasks/todo.md` — tareas activas priorizadas
+- `tasks/lessons.md` — lecciones aprendidas
+- `CLAUDE.local.md` — notas de sesión (no commiteado)
