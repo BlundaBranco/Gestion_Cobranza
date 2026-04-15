@@ -30,9 +30,9 @@
 
                     <div class="p-8 md:p-10"
                          x-data="paymentForm" x-init="init()">
-                        
+
                         <!-- Header Section -->
-                        <div class="mb-8">
+                        <div class="mb-6">
                             <h3 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
                                 <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-600">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +41,21 @@
                                 </span>
                                 Información del Pago
                             </h3>
-                            <p class="mt-2 text-sm text-gray-600 ml-12">Selecciona un cliente para ver y seleccionar sus cuotas pendientes.</p>
+                            <p class="mt-2 text-sm text-gray-600 ml-12" x-show="!isExtra">Selecciona un cliente para ver y seleccionar sus cuotas pendientes.</p>
+                            <p class="mt-2 text-sm text-amber-700 ml-12" x-show="isExtra">Cobro extra: genera folio sin descontar deuda de cuotas.</p>
+                        </div>
+
+                        <!-- Toggle Cobro Extra -->
+                        <div class="mb-6 p-4 rounded-xl border-2 border-dashed"
+                             :class="isExtra ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'">
+                            <label class="flex items-center gap-3 cursor-pointer select-none">
+                                <input type="checkbox" name="is_extra" value="1" x-model="isExtra"
+                                    class="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-2 focus:ring-amber-500">
+                                <div>
+                                    <span class="font-semibold text-gray-900">Es un cobro extra (no descuenta deuda)</span>
+                                    <p class="text-xs text-gray-600">Usar para traspasos, cargos administrativos u otros conceptos que requieren folio pero no aplican a cuotas.</p>
+                                </div>
+                            </label>
                         </div>
                         
                         <!-- Payment Information Grid -->
@@ -76,8 +90,22 @@
                             </div>
                         </div>
 
+                        <!-- Lot Selector (solo extras) -->
+                        <div x-show="isExtra" x-cloak class="bg-amber-50 rounded-xl p-6 border border-amber-200 mb-8">
+                            <h3 class="text-lg font-bold text-gray-900 mb-4">Lote / Socio emisor del folio</h3>
+                            <p class="text-xs text-gray-600 mb-3">El folio se genera con la secuencia del socio dueño del lote seleccionado.</p>
+                            <select id="lot_id" name="lot_id" class="select2-lot block w-full rounded-lg border-gray-300 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500" :required="isExtra" :disabled="!isExtra">
+                                <option value="">Seleccione un lote</option>
+                                @foreach($lots as $lot)
+                                    <option value="{{ $lot->id }}" data-owner="{{ $lot->owner->name ?? 'Sin socio' }}">
+                                        {{ $lot->identifier }} — {{ $lot->owner->name ?? 'Sin socio' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <!-- Installments Section -->
-                        <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+                        <div x-show="!isExtra" x-cloak class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                                 <div>
                                     <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -168,9 +196,15 @@
 
                         <!-- Notes Section -->
                         <div class="mt-8">
-                            <x-input-label for="notes" value="Notas (Opcional)" class="text-sm font-semibold text-gray-700" />
+                            <x-input-label for="notes" class="text-sm font-semibold text-gray-700">
+                                <span x-show="!isExtra">Notas (Opcional)</span>
+                                <span x-show="isExtra" class="text-amber-700">Concepto del cobro extra <span class="text-red-600">*</span></span>
+                            </x-input-label>
                             <div class="mt-2">
-                                <textarea id="notes" name="notes" rows="3" class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200" placeholder="Agrega cualquier observación adicional sobre este pago..."></textarea>
+                                <textarea id="notes" name="notes" rows="3"
+                                    class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                                    :placeholder="isExtra ? 'Ej: Cobro por traspaso de lote, cargo administrativo…' : 'Agrega cualquier observación adicional sobre este pago...'"
+                                    :required="isExtra">{{ old('notes') }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -202,26 +236,35 @@
                 selectedInstallments: [],
                 loading: false,
                 searchQuery: '',
+                isExtra: {{ old('is_extra') ? 'true' : 'false' }},
 
                 init() {
                     const self = this;
-                    
+
                     $('#client_id').select2({
                         theme: "classic",
                         placeholder: "Selecciona o busca un cliente",
                         allowClear: true
                     }).on('change', function () {
-                        // Actualizar el modelo de Alpine cuando Select2 cambia
                         self.clientId = $(this).val();
-                        self.fetchInstallments();
+                        if (!self.isExtra) self.fetchInstallments();
                     });
 
-                    // Establecer el valor inicial de Select2 si existe
+                    $('#lot_id').select2({
+                        theme: "classic",
+                        placeholder: "Selecciona o busca un lote",
+                        allowClear: true
+                    });
+
+                    const oldLotId = '{{ old('lot_id') }}';
+                    if (oldLotId) {
+                        $('#lot_id').val(oldLotId).trigger('change.select2');
+                    }
+
                     if (this.clientId) {
                         $('#client_id').val(this.clientId).trigger('change.select2');
-                        this.fetchInstallments();
+                        if (!this.isExtra) this.fetchInstallments();
                     } else {
-                        // Si no hay cliente seleccionado, asegurarse de limpiar la lista de cuotas
                         this.installments = [];
                     }
                 },

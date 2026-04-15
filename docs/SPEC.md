@@ -93,11 +93,13 @@ Los no-admin ven `payment_date` readonly. Solo admin puede editarla vía `Transa
 
 **(Task 1 en curso):** doble copia en una página con línea de corte punteada.
 
-### 3.6 Cobros extras ⬜ (Task 2 — pendiente de deploy)
+### 3.6 Cobros extras ✅
 Pagos que generan folio pero no descuentan deuda (traspasos, cargos administrativos).
-- Columna nueva: `transactions.type` string default `installment`. Valores: `installment` | `extra`.
+- Columna `transactions.type` string default `installment`. Valores: `installment` | `extra`.
 - Al crear tipo `extra`: exige selector de Lote (para derivar Owner y secuencia de folio) y `notes` como concepto. No se adjunta al pivot `installment_transaction`. No cambia status de cuotas.
-- Reportes: IncomeExport y TransactionHistoryExport muestran concepto `EXTRA: {notes}`.
+- PDF: vista separada `pdf_extra.blade.php`, sin tabla de desglose capital/interés, con aviso "no aplica a cuotas".
+- Reportes: IncomeExport y TransactionHistoryExport muestran concepto `EXTRA: {notes}`, capital = amount_paid, interés = 0.
+- **Limitación actual:** moneda de extras default MXN. Si se necesita USD hay que agregar campo `currency` explícito en el form.
 
 ---
 

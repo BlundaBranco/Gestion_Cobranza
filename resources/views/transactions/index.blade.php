@@ -113,6 +113,9 @@
                                             @if($transaction->trashed())
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-300">CANCELADO</span>
                                             @endif
+                                            @if($transaction->type === 'extra')
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">EXTRA</span>
+                                            @endif
                                         </div>
                                     </td>
                                     <td class="px-6 py-4">
@@ -135,9 +138,8 @@
                                     </td>
                                     <td class="px-6 py-4 font-semibold text-green-600">
                                         @php
-                                            // Obtener la moneda de la primera cuota si existe
                                             $firstInstallment = $transaction->installments->first();
-                                            $currency = $transaction->installments->first()->paymentPlan->currency ?? 'MXN';
+                                            $currency = $firstInstallment?->paymentPlan?->currency ?? 'MXN';
                                         @endphp
                                         {{ format_currency($transaction->amount_paid, $currency) }}
                                     </td>

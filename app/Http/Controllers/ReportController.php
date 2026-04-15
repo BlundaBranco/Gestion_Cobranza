@@ -51,18 +51,16 @@ class ReportController extends Controller
             $query->whereBetween('payment_date', [$startDate, $endDate]);
         }
 
-        // 3. Filtro por Socio
+        // 3. Filtro por Socio (usa owner_id snapshot de la transacción)
         if ($ownerId) {
-            $query->whereHas('installments.paymentPlan.lot', function ($q) use ($ownerId) {
-                $q->where('owner_id', $ownerId);
-            });
+            $query->where('owner_id', $ownerId);
         }
 
-$transactions = $query->orderBy('payment_date', 'desc')->get();
+        $transactions = $query->orderBy('payment_date', 'desc')->get();
 
         // Solo sumar transacciones activas en los totales
         $incomeByCurrency = $transactions->filter(fn($t) => $t->status === 'active')->groupBy(function ($tr) {
-            return $tr->installments->first()->paymentPlan->currency ?? 'MXN';
+            return $tr->installments->first()?->paymentPlan?->currency ?? 'MXN';
         })->map(function ($group) {
             return $group->sum('amount_paid');
         });

@@ -8,14 +8,14 @@
 - [x] Aumentar ligeramente la fuente base sin romper el constraint de media hoja por copia.
 - [x] Asegurar formato `#13 - Abril 2026` en concepto del PDF (ya existe) y **actualizar `app/Exports/IncomeExport.php`** para que la columna `MENSUALIDAD` muestre `#N - Mes Año` por cuota.
 
-### Task 2 — Módulo "Cobros Extras" ($100 USD) ⬜ pendiente de feedback de Task 1
-- [ ] Migración: agregar columna `type` a `transactions` (string, default `installment`).
-- [ ] Model `Transaction`: `type` en `$fillable`.
-- [ ] UI `transactions/create.blade.php`: toggle, selector de Lote, `notes` requerido.
-- [ ] `TransactionController@store`: fork a `storeExtra()` — genera folio vía `OwnerSequence`, NO toca pivot ni installments.
-- [ ] `ReportController@incomeReport`, `IncomeExport`, `TransactionHistoryExport`: incluir extras con concepto `"EXTRA: {notes}"`.
-- [ ] Vista PDF separada `pdf_extra.blade.php` — doble copia, sin desglose de cuotas.
-- [ ] Listado `transactions/index.blade.php`: badge "EXTRA" + null-safe en moneda.
+### Task 2 — Módulo "Cobros Extras" ($100 USD) ✅ implementado, pendiente deploy
+- [x] Migración `2026_04_15_000001_add_type_to_transactions_table.php`.
+- [x] Model `Transaction`: `type` en `$fillable`.
+- [x] UI `transactions/create.blade.php` — toggle Alpine, selector de Lote, `notes` requerido.
+- [x] `TransactionController@store` — fork a `storeExtra()`.
+- [x] `ReportController@incomeReport`, `IncomeExport`, `TransactionHistoryExport` — extras con `EXTRA: {notes}`.
+- [x] `pdf_extra.blade.php` con doble copia.
+- [x] Listado con badge "EXTRA" + null-safe en moneda.
 
 ## 🟢 Post-Task 2 — pendientes de decisión
 - [ ] Re-evaluar si se retoma "Saldo a favor" o se cierra definitivamente.

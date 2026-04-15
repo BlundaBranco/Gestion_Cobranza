@@ -9,3 +9,4 @@
 - [2026-04-10] **Data integrity**: `owner_id` en transactions debe guardarse como snapshot al crear, no derivarse por JOIN a lote (el lote puede transferirse). Confianza: alta.
 - [2026-04-15] **Scope**: Doc `SPEC.md` debe incluir lógica de negocio completa (folios, interés, SoftDeletes, enganche, multi-moneda), no solo features pendientes — sirve para prevenir regresiones. Confianza: alta.
 - [2026-04-15] **Workflow**: Implementar todo el código sin esperar feedback intermedio — el testing y QA lo hace el cliente, no el dev. Confianza: alta.
+- [2026-04-15] **Reports null safety**: transacciones sin installments (tipo `extra`) rompen `$transaction->installments->first()->paymentPlan->currency` — usar operador null-safe `?->` en todos los reports/vistas que infieren moneda desde installments. Confianza: alta.

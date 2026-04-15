@@ -137,9 +137,12 @@
                                     <td class="px-6 py-4 font-bold {{ $isCancelled ? 'line-through text-gray-400' : 'text-green-600' }}">
                                         @php
                                             $firstInstallment = $transaction->installments->first();
-                                            $currency = $firstInstallment ? $firstInstallment->paymentPlan->currency : 'MXN';
+                                            $currency = $firstInstallment?->paymentPlan?->currency ?? 'MXN';
                                         @endphp
                                         {{ format_currency($transaction->amount_paid, $currency) }}
+                                        @if($transaction->type === 'extra')
+                                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800">EXTRA</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty

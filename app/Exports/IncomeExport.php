@@ -33,13 +33,14 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
         return Transaction::withTrashed()
             ->with([
                 'client',
+                'owner',
                 'installments.paymentPlan.lot',
                 'installments.transactions',
             ])
             ->when($this->folioFrom, fn($q) => $q->where('id', '>=', $this->folioFrom))
             ->when($this->folioTo, fn($q) => $q->where('id', '<=', $this->folioTo))
             ->when(!$this->folioFrom && !$this->folioTo, fn($q) => $q->whereBetween('payment_date', [$this->startDate, $this->endDate]))
-            ->when($this->ownerId, fn($q) => $q->whereHas('installments.paymentPlan.lot', fn($sq) => $sq->where('owner_id', $this->ownerId)))
+            ->when($this->ownerId, fn($q) => $q->where('owner_id', $this->ownerId))
             ->orderBy('payment_date', 'desc');
     }
 
@@ -56,6 +57,26 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
         $firstInstallment = $transaction->installments->first();
         $currency = $firstInstallment?->paymentPlan->currency ?? 'MXN';
         $lot      = $firstInstallment?->paymentPlan->lot ?? null;
+
+        // Cobro extra: no aplica a cuotas, no tiene desglose capital/interés
+        if ($transaction->type === 'extra') {
+            $pesos = $currency === 'MXN' ? (float) $transaction->amount_paid : 0;
+            $dlls  = $currency === 'USD' ? (float) $transaction->amount_paid : 0;
+
+            return [
+                $transaction->folio_number,
+                $transaction->client->name,
+                'N/A',
+                'N/A',
+                $dlls,
+                $pesos,
+                $transaction->payment_date->format('d/m/Y'),
+                0,
+                0,
+                'EXTRA: ' . ($transaction->notes ?? ''),
+                $transaction->trashed() ? 'Cancelado' : 'Activo',
+            ];
+        }
 
         foreach ($transaction->installments as $installment) {
             $interestAmount = (float) $installment->interest_amount;

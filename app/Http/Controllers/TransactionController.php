@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\Installment;
+use App\Models\Lot;
 use App\Models\Transaction;
 use App\Models\Owner;
 use App\Models\OwnerSequence;
@@ -86,14 +87,21 @@ class TransactionController extends Controller
     public function create(Request $request)
     {
         $clients = Client::orderBy('name')->get();
+        $lots = Lot::with('owner')->orderBy('block_number')->orderBy('lot_number')->get();
         $selectedClientId = $request->query('client_id');
         $selectedInstallmentId = $request->query('installment_id');
 
-        return view('transactions.create', compact('clients', 'selectedClientId', 'selectedInstallmentId'));
+        return view('transactions.create', compact('clients', 'lots', 'selectedClientId', 'selectedInstallmentId'));
     }
 
     public function store(Request $request)
     {
+        $isExtra = $request->boolean('is_extra');
+
+        if ($isExtra) {
+            return $this->storeExtra($request);
+        }
+
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'amount_paid' => 'required|numeric|min:0.01',
@@ -181,13 +189,63 @@ class TransactionController extends Controller
             ->with('new_transaction_id', $transaction->id);
     }
 
+    protected function storeExtra(Request $request)
+    {
+        $validated = $request->validate([
+            'client_id' => 'required|exists:clients,id',
+            'lot_id' => 'required|exists:lots,id',
+            'amount_paid' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'notes' => 'required|string|max:500',
+        ]);
+
+        $client = Client::findOrFail($validated['client_id']);
+        $lot = Lot::findOrFail($validated['lot_id']);
+        $ownerId = $lot->owner_id;
+
+        if (!$ownerId) {
+            return back()
+                ->with('error', 'El lote seleccionado no tiene un socio asignado — no se puede generar folio.')
+                ->withInput();
+        }
+
+        $transaction = null;
+
+        try {
+            DB::beginTransaction();
+
+            $transaction = $client->transactions()->create([
+                'amount_paid' => floatval($validated['amount_paid']),
+                'payment_date' => $validated['payment_date'],
+                'notes' => $validated['notes'],
+                'user_id' => auth()->id(),
+                'type' => 'extra',
+                'owner_id' => $ownerId,
+            ]);
+
+            $nextValue = OwnerSequence::getNextValue($ownerId);
+            $transaction->folio_number = 'FOLIO-' . str_pad($nextValue, 6, '0', STR_PAD_LEFT);
+            $transaction->save();
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al registrar el cobro extra: ' . $e->getMessage())->withInput();
+        }
+
+        return redirect()->route('transactions.index')
+            ->with('success', 'Cobro extra registrado exitosamente.')
+            ->with('new_transaction_id', $transaction->id);
+    }
+
     public function showPdf($id)
     {
         $transaction = Transaction::withTrashed()->findOrFail($id);
-        $transaction->load(['client', 'user', 'installments.paymentPlan.lot', 'installments.paymentPlan.service']);
-        
-        $pdf = PDF::loadView('transactions.pdf', compact('transaction'));
-        
+        $transaction->load(['client', 'user', 'owner', 'installments.paymentPlan.lot', 'installments.paymentPlan.service']);
+
+        $view = $transaction->type === 'extra' ? 'transactions.pdf_extra' : 'transactions.pdf';
+        $pdf = PDF::loadView($view, compact('transaction'));
+
         return $pdf->stream('recibo-' . $transaction->folio_number . '.pdf');
     }
 }
