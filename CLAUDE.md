@@ -99,3 +99,36 @@ Located in `app/Console/Commands/` — used for data migrations and one-off fixe
 - Tailwind custom theme: `primary` (blue), `success` (green), `danger` (red), `warning` (yellow).
 - DB sessions and cache use database driver (no Redis).
 - Queue driver is `database` — jobs are not async by default.
+
+## Critical Rules — NEVER
+
+- **NUNCA** correr `php artisan route:cache` en producción — rompe rutas bajo FPM.
+- **NUNCA** deployar código que referencia migraciones sin correr `php artisan migrate` antes en prod.
+- **NUNCA** usar `detach()` en el pivot `installment_transaction` al cancelar una Transaction — usar `updateExistingPivot(amount_applied=0)` para preservar auditoría y cadena owner.
+- **NUNCA** generar folios fuera de `DB::transaction` — el `lockForUpdate()` en `OwnerSequence::getNextValue()` solo es efectivo dentro de la transacción.
+- **NUNCA** configurar Pint hooks o auto-format — el usuario quiere diffs mínimos y estrictos.
+- **NUNCA** deploy automático por SSH — dar los comandos al usuario para que los copie.
+
+## Negocio — contexto clave
+
+- Cliente: Yanet (comunicación en español, tono formal, nunca mencionar IA).
+- Folios son **por Owner**, no globales — colisiones entre secciones son normales.
+- Interés = 10% mensual sobre cuotas vencidas, acumulativo, persistido en `installments.interest_amount`.
+- Saldo a favor (`credit_balance`) está **en pausa** tras incidente 2026-03-30. No re-implementar sin análisis.
+
+## Documentación
+
+- `docs/ARCHITECTURE.md` — diagrama de dominio, flujo de pago, decisiones arquitectónicas
+- `docs/SPEC.md` — especificación funcional completa con estado por feature
+- `tasks/todo.md` — tareas activas priorizadas
+- `tasks/lessons.md` — lecciones aprendidas (actualizar tras cada corrección)
+
+## Meta-reglas (NUNCA borrar)
+
+- Después de CUALQUIER corrección del usuario, actualizar `tasks/lessons.md` con una regla atómica.
+- Si la lección es convención o estilo, además actualizar este CLAUDE.md.
+- Antes de implementar algo que toque >3 archivos, escribir mini-spec y pedir confirmación.
+- Después de cada tarea completada, marcarla en `tasks/todo.md`.
+- Commits atómicos, en español, descriptivos. Sin prefijos convencionales salvo `Fix:` / `feat:` ya establecidos en el repo.
+- Si no estás seguro, PREGUNTÁ. No asumas.
+- Idioma: comunicación con el usuario en español, código/identifiers en inglés.

@@ -93,7 +93,11 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
         }
 
         $concepto = $transaction->installments
-            ->map(fn ($i) => \Carbon\Carbon::parse($i->due_date)->locale('es')->isoFormat('MMM YYYY'))
+            ->map(function ($i) {
+                $num = $i->installment_number == 0 ? 'Eng' : '#'.$i->installment_number;
+                $mes = ucfirst(\Carbon\Carbon::parse($i->due_date)->locale('es')->isoFormat('MMMM YYYY'));
+                return $num . ' - ' . $mes;
+            })
             ->join(', ');
 
         return [
