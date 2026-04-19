@@ -50,8 +50,8 @@ Request → validate → DB::beginTransaction
 
 ## Integraciones externas
 
-- **Producción:** DigitalOcean 137.184.38.230 (`/var/www/gestion_cobranza`), dominio `gestioncobranza.duckdns.org`
-- **Deploy:** SSH manual vía paramiko (Python). NUNCA `route:cache`.
+- **Producción:** DigitalOcean (VPS), `/var/www/gestion_cobranza`
+- **Deploy:** SSH manual. NUNCA `route:cache`.
 - **DB:** SQLite local, MySQL producción. Sessions/cache/queue = database driver.
 - **PDF:** barryvdh/laravel-dompdf. **Excel:** Maatwebsite/Excel 4.
 

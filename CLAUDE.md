@@ -4,7 +4,7 @@ Guía para trabajar en este repo. Si crece, compactar — mantener ≤100 línea
 
 ## Proyecto
 
-SaaS de gestión de cobranza inmobiliaria (cliente: **Yanet**). Planes de pago, cuotas, folios por socio, reportes de ingresos. En producción en `gestioncobranza.duckdns.org`.
+SaaS de gestión de cobranza inmobiliaria. Planes de pago, cuotas, folios por socio, reportes de ingresos.
 
 ## Stack
 
@@ -41,15 +41,13 @@ Ver `docs/ARCHITECTURE.md` y `docs/SPEC.md` para detalle completo.
 - **NUNCA** `detach()` en pivot `installment_transaction` al cancelar.
 - **NUNCA** generar folio fuera de `DB::transaction`.
 - **NUNCA** configurar Pint hooks ni auto-format — el usuario quiere diffs mínimos.
-- **NUNCA** mencionar el uso de IA al cliente. El usuario se presenta como ingeniero senior.
 - **NUNCA** guardar credenciales (passwords, tokens) en archivos commiteados o en memoria persistente.
 
 ## Deploy a producción
 
-SSH key ya autorizada para `testuser@137.184.38.230`. Deploy manual por el usuario:
+Deploy manual vía SSH:
 
 ```bash
-ssh testuser@137.184.38.230
 cd /var/www/gestion_cobranza && git pull origin master && composer install --no-dev -o && sudo php artisan migrate --force && sudo php artisan optimize:clear && sudo php artisan view:clear
 ```
 
@@ -58,7 +56,6 @@ cd /var/www/gestion_cobranza && git pull origin master && composer install --no-
 
 ## Negocio — contexto clave
 
-- Cliente **Yanet**. Tono formal en español. Nunca bullets innecesarios en mensajes.
 - Tipos de transaction: `installment` (default) y `extra` (cobros sin descuento de deuda).
 - **Saldo a favor (`credit_balance`) está en PAUSA** tras incidente 2026-03-30. No re-implementar sin análisis.
 

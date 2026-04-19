@@ -12,29 +12,23 @@ class UserSeeder extends Seeder
     {
         // Administradores
         User::create([
-            'name' => 'Martha Landa',
-            'username' => 'martha',
-            'password' => Hash::make('020495'),
+            'name' => 'Admin Principal',
+            'username' => 'admin',
+            'password' => Hash::make('password'),
             'role' => 'admin',
         ]);
         User::create([
-            'name' => 'Orlando Torres',
-            'username' => 'orlando',
-            'password' => Hash::make('930225'),
-            'role' => 'admin',
-        ]);
-        User::create([
-            'name' => 'Yanet Landa',
-            'username' => 'yanet',
-            'password' => Hash::make('170589'),
+            'name' => 'Admin Secundario',
+            'username' => 'admin2',
+            'password' => Hash::make('password'),
             'role' => 'admin',
         ]);
 
         // Usuario estándar
         User::create([
-            'name' => 'Emily Reyes',
-            'username' => 'emily',
-            'password' => Hash::make('050807'),
+            'name' => 'Usuario Demo',
+            'username' => 'demo',
+            'password' => Hash::make('password'),
             'role' => 'user',
         ]);
     }
