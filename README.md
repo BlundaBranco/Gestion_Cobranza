@@ -14,18 +14,14 @@ Desarrollado con una arquitectura **Multi-Socio**, permite gestionar carteras de
 
 ## 📸 Vistas del Sistema
 
-### Dashboard Principal
-Vista general con métricas en tiempo real, alertas de cuotas vencidas y accesos rápidos.
-![Dashboard](screenshots/dashboard1.png) ![Dashboard](screenshots/dashboard2.png)
+> Screenshots con datos de demo próximamente.
 
-
-### Gestión de Planes de Pago y Cuotas
-Motor financiero capaz de calcular enganches, mensualidades, intereses por mora y pagos parciales.
-![Gestión de Lote](screenshots/gestionar_lote_1.png) ![Gestión de Lote](screenshots/gestionar_lote_2.png)
-
-### Generación de Recibos (Folios)
-Generación automática de comprobantes en PDF con desglose de capital e intereses y conversión de montos a letras.
-![Folio PDF](screenshots/folio_pdf.png)
+**Pantallas principales:**
+- **Dashboard** — métricas en tiempo real, cuotas vencidas, accesos rápidos
+- **Gestión de Lotes** — planes de pago, cuotas, intereses, transferencias de propiedad
+- **Registrar Pago** — selector de cuotas, aplicación automática por fecha de vencimiento
+- **Recibo PDF** — folio numerado, desglose capital/interés, monto en letras
+- **Reportes** — ingresos por período y socio, mora por manzana, exportación a Excel
 
 
 ---

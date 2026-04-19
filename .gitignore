@@ -28,3 +28,6 @@ CLAUDE.local.md
 
 # Claude Code local settings (pueden contener tokens o comandos con credenciales)
 .claude/settings.local.json
+
+# Screenshots con datos de clientes reales — agregar versión demo antes de commitear
+/screenshots/

@@ -6,7 +6,7 @@
 - Commit `4c6ecc5` pusheado a `origin master`.
 - PDF duplica ORIGINAL-CLIENTE / COPIA-EMPRESA con línea de corte; fix overflow signature-line; fuente +1px.
 - `IncomeExport` y `TransactionHistoryExport`: columna MENSUALIDAD ahora muestra `#N - Mes Año`.
-- **Pendiente:** deploy manual del usuario + QA de Yanet.
+- **Pendiente:** deploy manual del usuario + QA de el cliente.
 
 ### Task 2 — Módulo Cobros Extras
 - Commit `3aef5d2` local, NO pusheado — espera feedback de Task 1.
@@ -18,12 +18,12 @@
 ## 🟡 Pendiente de acción del usuario
 
 - [ ] Deploy Task 1 al servidor (comando en `CLAUDE.md`).
-- [ ] QA con Yanet — probar doble copia PDF + Excel concepto.
+- [ ] QA con el cliente — probar doble copia PDF + Excel concepto.
 - [ ] Aprobación para pushear Task 2 (`git push origin 3aef5d2:master`) y deployar.
 
 ## 🟢 Pendientes de decisión
 
-- [ ] Moneda en cobros extras: actualmente default MXN. Si Yanet cobra traspasos en USD, agregar selector USD/MXN.
+- [ ] Moneda en cobros extras: actualmente default MXN. Si el cliente cobra traspasos en USD, agregar selector USD/MXN.
 - [ ] Re-evaluar si se retoma "Saldo a favor" o se cierra definitivamente.
 
 ## 🔵 Deuda técnica detectada (sin prioridad aún)
