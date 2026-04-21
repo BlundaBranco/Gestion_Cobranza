@@ -90,18 +90,29 @@
                             </div>
                         </div>
 
-                        <!-- Lot Selector (solo extras) -->
+                        <!-- Lot Selector + Moneda (solo extras) -->
                         <div x-show="isExtra" x-cloak class="bg-amber-50 rounded-xl p-6 border border-amber-200 mb-8">
                             <h3 class="text-lg font-bold text-gray-900 mb-4">Lote / Socio emisor del folio</h3>
                             <p class="text-xs text-gray-600 mb-3">El folio se genera con la secuencia del socio dueño del lote seleccionado.</p>
-                            <select id="lot_id" name="lot_id" class="select2-lot block w-full rounded-lg border-gray-300 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500" :required="isExtra" :disabled="!isExtra">
-                                <option value="">Seleccione un lote</option>
-                                @foreach($lots as $lot)
-                                    <option value="{{ $lot->id }}" data-owner="{{ $lot->owner->name ?? 'Sin socio' }}">
-                                        {{ $lot->identifier }} — {{ $lot->owner->name ?? 'Sin socio' }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="md:col-span-2">
+                                    <select id="lot_id" name="lot_id" class="select2-lot block w-full rounded-lg border-gray-300 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500" :required="isExtra" :disabled="!isExtra">
+                                        <option value="">Seleccione un lote</option>
+                                        @foreach($lots as $lot)
+                                            <option value="{{ $lot->id }}" data-owner="{{ $lot->owner->name ?? 'Sin socio' }}">
+                                                {{ $lot->identifier }} — {{ $lot->owner->name ?? 'Sin socio' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <x-input-label for="currency" value="Moneda" class="text-sm font-semibold text-gray-700 mb-2 block" />
+                                    <select id="currency" name="currency" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500">
+                                        <option value="MXN" @selected(old('currency', 'MXN') === 'MXN')>MXN — Pesos</option>
+                                        <option value="USD" @selected(old('currency') === 'USD')>USD — Dólares</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Installments Section -->

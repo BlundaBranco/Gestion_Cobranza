@@ -20,6 +20,7 @@ class Transaction extends Model
         'payment_date',
         'folio_number',
         'type',
+        'currency',
         'notes',
         'status',
         'cancelled_by',

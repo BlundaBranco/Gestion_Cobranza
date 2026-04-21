@@ -197,6 +197,7 @@ class TransactionController extends Controller
             'amount_paid' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
             'notes' => 'required|string|max:500',
+            'currency' => 'nullable|in:MXN,USD',
         ]);
 
         $client = Client::findOrFail($validated['client_id']);
@@ -221,6 +222,7 @@ class TransactionController extends Controller
                 'user_id' => auth()->id(),
                 'type' => 'extra',
                 'owner_id' => $ownerId,
+                'currency' => $validated['currency'] ?? 'MXN',
             ]);
 
             $nextValue = OwnerSequence::getNextValue($ownerId);
