@@ -25,7 +25,7 @@
         .header-col { display: table-cell; vertical-align: middle; }
 
         .company-details { text-align: center; font-size: 11px; font-weight: bold; line-height: 1.3; }
-        .folio-box { border: 2px solid #000; padding: 4px; text-align: center; float: right; width: 120px; }
+        .folio-box { border: 2px solid #000; padding: 8px 6px; text-align: center; float: right; width: 140px; }
 
         .body-section { margin-top: 10px; }
         .data-table { width: 100%; border-collapse: collapse; }
@@ -36,7 +36,7 @@
 
         .concepto-box { border: 1px solid #999; padding: 8px; margin-top: 8px; background: #fafafa; min-height: 40px; font-family: 'Courier New', Courier, monospace; font-size: 12px; }
 
-        .signature-line { border-top: 1px solid #000; margin-top: 18px; width: 180px; text-align: center; padding-top: 3px; font-size: 10px; }
+        .signature-line { border-top: 1px solid #000; margin-top: 38px; width: 180px; text-align: center; padding-top: 3px; font-size: 10px; }
     </style>
 </head>
 <body>
@@ -44,7 +44,7 @@
         \Carbon\Carbon::setLocale('es');
         $ownerName = $transaction->owner->name ?? 'N/A';
         $currency = $transaction->currency ?? 'MXN';
-        $copies = ['ORIGINAL - EMPRESA', 'COPIA - CLIENTE'];
+        $copies = ['ORIGINAL CLIENTE', 'COPIA EMPRESA'];
     @endphp
 
     @foreach ($copies as $copyIndex => $copyLabel)
