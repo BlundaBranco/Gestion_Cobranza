@@ -44,7 +44,7 @@
         \Carbon\Carbon::setLocale('es');
         $ownerName = $transaction->owner->name ?? 'N/A';
         $currency = $transaction->currency ?? 'MXN';
-        $copies = ['ORIGINAL - CLIENTE', 'COPIA - EMPRESA'];
+        $copies = ['ORIGINAL - EMPRESA', 'COPIA - CLIENTE'];
     @endphp
 
     @foreach ($copies as $copyIndex => $copyLabel)

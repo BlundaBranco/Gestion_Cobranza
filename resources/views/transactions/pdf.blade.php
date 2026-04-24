@@ -99,7 +99,7 @@
 
         $conceptStyle = (strlen($conceptoTexto) > 80 || $installments->count() > 4) ? 'font-size: 10px;' : '';
 
-        $copies = ['ORIGINAL - CLIENTE', 'COPIA - EMPRESA'];
+        $copies = ['ORIGINAL - EMPRESA', 'COPIA - CLIENTE'];
     @endphp
 
     @foreach ($copies as $copyIndex => $copyLabel)
