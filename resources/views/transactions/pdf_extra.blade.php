@@ -10,7 +10,7 @@
         .receipt-box {
             border: 2px solid #000;
             padding: 0;
-            height: 355px;
+            height: 430px;
             position: relative;
             box-sizing: border-box;
             page-break-inside: avoid;
@@ -53,7 +53,7 @@
             <span class="copy-tag">{{ $copyLabel }}</span>
 
             {{-- Tabla interna: fila 1 = header+cuerpo (vertical-align top), fila 2 = footer (vertical-align bottom) --}}
-            <table style="width: 100%; height: 349px; border-collapse: collapse; table-layout: fixed;">
+            <table style="width: 100%; height: 424px; border-collapse: collapse; table-layout: fixed;">
                 <tr>
                     <td style="vertical-align: top; padding: 12px 15px 0 15px;">
 
@@ -115,7 +115,7 @@
 
                     </td>
                 </tr>
-                <tr style="height: 75px;">
+                <tr style="height: 150px;">
                     <td style="vertical-align: bottom; padding: 0 15px 12px 15px;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <tr>
