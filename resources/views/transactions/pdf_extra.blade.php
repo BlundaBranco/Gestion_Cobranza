@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Recibo de Cobro Extra - {{ $transaction->folio_number }}</title>
     <style>
-        @page { margin: 20px; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 12px; color: #333; }
+        @page { margin: 0; }
+        body { font-family: 'Helvetica', sans-serif; font-size: 12px; color: #333; margin: 0; }
 
         .receipt-box {
             border: 2px solid #000;
