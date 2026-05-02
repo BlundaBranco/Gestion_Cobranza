@@ -31,23 +31,23 @@ class ReportController extends Controller
         // LOGICA DE FILTRADO
         
         // 1. Filtro por Rango de Folios (Prioritario si se usa)
-        // Se asume que el ID de la transacción corresponde al número de folio
+        // El folio_number tiene formato 'FOLIO-XXXXXX' (padded a 6 dígitos por owner).
+        // Comparamos como string padded — la comparación lexicográfica equivale a la numérica.
         $filteringByFolio = false;
-        
-        if ($folioFrom) {
-            $query->where('id', '>=', $folioFrom);
+
+        if ($folioFrom !== null && $folioFrom !== '') {
+            $query->where('folio_number', '>=', 'FOLIO-' . str_pad((int) $folioFrom, 6, '0', STR_PAD_LEFT));
             $filteringByFolio = true;
         }
-        if ($folioTo) {
-            $query->where('id', '<=', $folioTo);
+        if ($folioTo !== null && $folioTo !== '') {
+            $query->where('folio_number', '<=', 'FOLIO-' . str_pad((int) $folioTo, 6, '0', STR_PAD_LEFT));
             $filteringByFolio = true;
         }
 
         // 2. Filtro por Fechas
-        // Si NO se está filtrando por folio, O si el usuario explícitamente selecciona fechas, aplicamos fecha.
-        // (En este caso, aplicamos fechas siempre por defecto a menos que el usuario las limpie, 
-        // pero mantendremos la lógica de que coexistan).
-        if ($request->filled('start_date') && $request->filled('end_date')) {
+        // Si se está filtrando por folio, ignoramos fechas — el folio es prioritario
+        // y los folios pueden ser de meses anteriores al rango por defecto.
+        if (!$filteringByFolio && $request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('payment_date', [$startDate, $endDate]);
         }
 

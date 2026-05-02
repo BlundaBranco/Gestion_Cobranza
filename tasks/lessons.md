@@ -15,3 +15,4 @@
 - [2026-04-15] **Git workflow**: Para separar un commit en dos después de hacerlo, usar `git reset --soft HEAD~1` + re-stage selectivo. Pushear solo el primero con `git push origin <sha>:master`. Confianza: alta.
 - [2026-04-15] **File state after checkout**: Después de `git checkout HEAD -- <file>`, los Reads en contexto quedan stale. Siempre re-leer antes de Edit. Confianza: alta.
 - [2026-04-15] **Autonomy scope**: El usuario quiere máxima autonomía en local (commits, pushes, docs), pero deploy SSH lo hace él mismo. Confianza: alta.
+- [2026-05-02] **Folio filtering**: Filtrar transactions por rango de folio con `where('id', ...)` es incorrecto — el folio es secuencia por Owner, no coincide con el id global. Comparar contra `folio_number` como string padded: `'FOLIO-' . str_pad((int) $val, 6, '0', STR_PAD_LEFT)`. Aplica a reportes y exports. Confianza: alta.

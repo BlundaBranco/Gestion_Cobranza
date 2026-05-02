@@ -37,8 +37,8 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
                 'installments.paymentPlan.lot',
                 'installments.transactions',
             ])
-            ->when($this->folioFrom, fn($q) => $q->where('id', '>=', $this->folioFrom))
-            ->when($this->folioTo, fn($q) => $q->where('id', '<=', $this->folioTo))
+            ->when($this->folioFrom, fn($q) => $q->where('folio_number', '>=', 'FOLIO-' . str_pad((int) $this->folioFrom, 6, '0', STR_PAD_LEFT)))
+            ->when($this->folioTo, fn($q) => $q->where('folio_number', '<=', 'FOLIO-' . str_pad((int) $this->folioTo, 6, '0', STR_PAD_LEFT)))
             ->when(!$this->folioFrom && !$this->folioTo, fn($q) => $q->whereBetween('payment_date', [$this->startDate, $this->endDate]))
             ->when($this->ownerId, fn($q) => $q->where('owner_id', $this->ownerId))
             ->orderBy('payment_date', 'desc');
