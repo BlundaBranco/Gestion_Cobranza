@@ -101,7 +101,7 @@ class LotController extends Controller
 
     public function edit(Lot $lot)
     {
-        $lot->load('ownershipHistory.previousClient', 'ownershipHistory.newClient');
+        $lot->load('ownershipHistory.previousClient', 'ownershipHistory.newClient', 'paymentPlans.installments.transactions');
         $clients = Client::orderBy('name')->get();
         return view('lots.edit', compact('lot', 'clients'));
     }

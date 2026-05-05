@@ -83,6 +83,9 @@
                 </form>
             </div>
 
+            <!-- Resumen Financiero -->
+            @include('lots._financial-summary')
+
             <!-- Planes de Pago -->
             <div class="bg-white shadow-md sm:rounded-lg overflow-hidden border border-gray-100">
                 <div class="p-6 md:p-8">
