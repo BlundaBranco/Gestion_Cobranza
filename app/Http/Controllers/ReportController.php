@@ -97,6 +97,8 @@ class ReportController extends Controller
 
     public function export(Request $request)
     {
+        abort_unless(auth()->user()->role === 'admin', 403);
+
         $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
         $ownerId = $request->input('owner_id');

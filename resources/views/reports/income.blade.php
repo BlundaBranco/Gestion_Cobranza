@@ -69,6 +69,7 @@
                         </div>
                     </div>
 
+                    @if(auth()->user()->role === 'admin')
                     {{-- Botón Exportar --}}
                     <div class="mt-4 pt-4 border-t border-gray-100 flex justify-end">
                         <a href="{{ route('reports.export', request()->query()) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500 transition shadow-sm">
@@ -76,6 +77,7 @@
                             Exportar Excel
                         </a>
                     </div>
+                    @endif
                 </form>
             </div>
 
@@ -91,6 +93,7 @@
                                 Del {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}
                             </p>
                         </div>
+                        @if(auth()->user()->role === 'admin')
                         <div class="text-left md:text-right">
                             <p class="text-sm text-gray-600 mb-1 font-medium">Total Ingresado</p>
                             <div class="flex flex-col gap-1 md:items-end">
@@ -103,6 +106,7 @@
                                 @endforelse
                             </div>
                         </div>
+                        @endif
                     </div>
                 </div>
 
@@ -113,7 +117,9 @@
                                 <th class="px-6 py-4 text-left font-bold">Folio</th>
                                 <th class="px-6 py-4 text-left font-bold">Fecha de Pago</th>
                                 <th class="px-6 py-4 text-left font-bold">Cliente</th>
+                                @if(auth()->user()->role === 'admin')
                                 <th class="px-6 py-4 text-left font-bold">Monto</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -134,6 +140,7 @@
                                     <td class="px-6 py-4">
                                         <span class="text-gray-900 font-medium">{{ $transaction->client->name }}</span>
                                     </td>
+                                    @if(auth()->user()->role === 'admin')
                                     <td class="px-6 py-4 font-bold {{ $isCancelled ? 'line-through text-gray-400' : 'text-green-600' }}">
                                         @php
                                             $firstInstallment = $transaction->installments->first();
@@ -144,10 +151,11 @@
                                             <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800">EXTRA</span>
                                         @endif
                                     </td>
+                                    @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-6 py-16 text-center">
+                                    <td colspan="{{ auth()->user()->role === 'admin' ? 4 : 3 }}" class="px-6 py-16 text-center">
                                         <p class="text-lg font-semibold text-gray-900 mb-2">No hay transacciones</p>
                                         <p class="text-gray-600">No se encontraron transacciones en este período.</p>
                                     </td>
