@@ -21,6 +21,7 @@ class Transaction extends Model
         'folio_number',
         'type',
         'currency',
+        'payment_method',
         'notes',
         'status',
         'cancelled_by',
@@ -28,6 +29,18 @@ class Transaction extends Model
     protected $casts = [
         'payment_date' => 'date',
     ];
+
+    public const PAYMENT_METHODS = [
+        'efectivo'      => 'Efectivo',
+        'transferencia' => 'Transferencia',
+        'cheque'        => 'Cheque',
+        'deposito'      => 'Depósito',
+    ];
+
+    public function getPaymentMethodLabelAttribute(): ?string
+    {
+        return self::PAYMENT_METHODS[$this->payment_method] ?? null;
+    }
 
     public function client()
     {

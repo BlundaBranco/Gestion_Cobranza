@@ -27,9 +27,8 @@
                     </div>
                 </div>
                 <form method="GET" action="{{ route('reports.income') }}" class="p-6">
-                    {{-- Se ajustó a 6 columnas para acomodar el rango de folios --}}
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
-                        
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 items-end">
+
                         {{-- Fechas --}}
                         <div>
                             <x-input-label for="start_date" value="Fecha Inicio" />
@@ -40,7 +39,7 @@
                             <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full text-sm" :value="$endDate" />
                         </div>
 
-                        {{-- Rango de Folios (NUEVO) --}}
+                        {{-- Rango de Folios --}}
                         <div>
                             <x-input-label for="folio_from" value="Folio Desde" />
                             <x-text-input id="folio_from" name="folio_from" type="number" class="mt-1 block w-full text-sm" placeholder="Ej: 1" :value="request('folio_from')" />
@@ -59,6 +58,17 @@
                                     <option value="{{ $owner->id }}" @selected(request('owner_id') == $owner->id)>
                                         {{ $owner->name }}
                                     </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Método de pago --}}
+                        <div>
+                            <x-input-label for="payment_method" value="Método" />
+                            <select id="payment_method" name="payment_method" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                <option value="">Todos</option>
+                                @foreach(\App\Models\Transaction::PAYMENT_METHODS as $value => $label)
+                                    <option value="{{ $value }}" @selected(($selectedPaymentMethod ?? '') === $value)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -117,6 +127,7 @@
                                 <th class="px-6 py-4 text-left font-bold">Folio</th>
                                 <th class="px-6 py-4 text-left font-bold">Fecha de Pago</th>
                                 <th class="px-6 py-4 text-left font-bold">Cliente</th>
+                                <th class="px-6 py-4 text-left font-bold">Método</th>
                                 @if(auth()->user()->role === 'admin')
                                 <th class="px-6 py-4 text-left font-bold">Monto</th>
                                 @endif
@@ -140,6 +151,13 @@
                                     <td class="px-6 py-4">
                                         <span class="text-gray-900 font-medium">{{ $transaction->client->name }}</span>
                                     </td>
+                                    <td class="px-6 py-4 text-gray-700">
+                                        @if($transaction->payment_method_label)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">{{ $transaction->payment_method_label }}</span>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
                                     @if(auth()->user()->role === 'admin')
                                     <td class="px-6 py-4 font-bold {{ $isCancelled ? 'line-through text-gray-400' : 'text-green-600' }}">
                                         @php
@@ -155,7 +173,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ auth()->user()->role === 'admin' ? 4 : 3 }}" class="px-6 py-16 text-center">
+                                    <td colspan="{{ auth()->user()->role === 'admin' ? 5 : 4 }}" class="px-6 py-16 text-center">
                                         <p class="text-lg font-semibold text-gray-900 mb-2">No hay transacciones</p>
                                         <p class="text-gray-600">No se encontraron transacciones en este período.</p>
                                     </td>

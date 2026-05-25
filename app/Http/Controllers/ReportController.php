@@ -21,7 +21,8 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
         $ownerId = $request->input('owner_id');
-        
+        $paymentMethod = $request->input('payment_method');
+
         // Parámetros de Rango de Folio
         $folioFrom = $request->input('folio_from');
         $folioTo = $request->input('folio_to');
@@ -29,7 +30,7 @@ class ReportController extends Controller
         $query = \App\Models\Transaction::withTrashed()->with(['client', 'installments.paymentPlan.lot.owner']);
 
         // LOGICA DE FILTRADO
-        
+
         // 1. Filtro por Rango de Folios (Prioritario si se usa)
         // El folio_number tiene formato 'FOLIO-XXXXXX' (padded a 6 dígitos por owner).
         // Comparamos como string padded — la comparación lexicográfica equivale a la numérica.
@@ -56,6 +57,11 @@ class ReportController extends Controller
             $query->where('owner_id', $ownerId);
         }
 
+        // 4. Filtro por Método de pago
+        if ($paymentMethod && array_key_exists($paymentMethod, \App\Models\Transaction::PAYMENT_METHODS)) {
+            $query->where('payment_method', $paymentMethod);
+        }
+
         $transactions = $query->orderBy('payment_date', 'desc')->get();
 
         // Solo sumar transacciones activas en los totales
@@ -64,18 +70,18 @@ class ReportController extends Controller
         })->map(function ($group) {
             return $group->sum('amount_paid');
         });
-        
+
         $owners = \App\Models\Owner::orderBy('name')->get();
 
         return view('reports.income', [
             'transactions' => $transactions,
-            // 'totalIncome' => $totalIncome, // <-- ESTA VARIABLE SE ELIMINA
-            'incomeByCurrency' => $incomeByCurrency, // <-- SE ENVÍA ESTA NUEVA
+            'incomeByCurrency' => $incomeByCurrency,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'owners' => $owners,
-            'folio_search' => $request->input('folio_search'), // Asegúrate de pasar esto si usas el filtro
+            'folio_search' => $request->input('folio_search'),
             'selectedOwner' => $request->input('owner_id'),
+            'selectedPaymentMethod' => $paymentMethod,
         ]);
     }
 
@@ -104,8 +110,9 @@ class ReportController extends Controller
         $ownerId = $request->input('owner_id');
         $folioFrom = $request->input('folio_from');
         $folioTo = $request->input('folio_to');
+        $paymentMethod = $request->input('payment_method');
 
-        return Excel::download(new IncomeExport($startDate, $endDate, $ownerId, $folioFrom, $folioTo), 'reporte_ingresos.xlsx');
+        return Excel::download(new IncomeExport($startDate, $endDate, $ownerId, $folioFrom, $folioTo, $paymentMethod), 'reporte_ingresos.xlsx');
     }
 
     public function exportOverdue(Request $request)

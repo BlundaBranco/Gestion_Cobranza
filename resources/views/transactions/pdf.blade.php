@@ -153,6 +153,12 @@
                                     <td class="label">La cantidad de:</td>
                                     <td class="content" style="font-size: 11px;">{{ number_to_words_es($transaction->amount_paid) }} ({{ $currency }})</td>
                                 </tr>
+                                @if($transaction->payment_method_label)
+                                <tr>
+                                    <td class="label">Método de pago:</td>
+                                    <td class="content">{{ $transaction->payment_method_label }}</td>
+                                </tr>
+                                @endif
                                 <tr>
                                     <td class="label" style="padding-top: 6px;">Por cuenta de:</td>
                                     <td class="content">

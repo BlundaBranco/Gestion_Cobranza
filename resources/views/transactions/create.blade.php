@@ -90,6 +90,20 @@
                             </div>
                         </div>
 
+                        <!-- Método de pago (opcional) -->
+                        <div class="mb-8">
+                            <x-input-label for="payment_method" value="Método de pago (opcional)" class="text-sm font-semibold text-gray-700" />
+                            <p class="text-xs text-gray-500 mt-1">Si lo dejás en blanco, no aparece en el recibo.</p>
+                            <div class="mt-2 md:max-w-xs">
+                                <select id="payment_method" name="payment_method" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200">
+                                    <option value="">— Sin especificar —</option>
+                                    @foreach(\App\Models\Transaction::PAYMENT_METHODS as $value => $label)
+                                        <option value="{{ $value }}" @selected(old('payment_method') === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
                         <!-- Lot Selector + Moneda (solo extras) -->
                         <div x-show="isExtra" x-cloak class="bg-amber-50 rounded-xl p-6 border border-amber-200 mb-8">
                             <h3 class="text-lg font-bold text-gray-900 mb-4">Lote / Socio emisor del folio</h3>

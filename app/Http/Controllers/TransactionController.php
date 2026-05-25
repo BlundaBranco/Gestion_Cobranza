@@ -107,6 +107,7 @@ class TransactionController extends Controller
             'amount_paid' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
+            'payment_method' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(Transaction::PAYMENT_METHODS))],
             'installments' => 'required|array',
             'installments.*' => 'exists:installments,id',
         ]);
@@ -124,6 +125,7 @@ class TransactionController extends Controller
                 'amount_paid' => $amountToApply,
                 'payment_date' => $validated['payment_date'],
                 'notes' => $validated['notes'],
+                'payment_method' => $validated['payment_method'] ?? null,
                 'user_id' => auth()->id(),
             ]);
 
@@ -198,6 +200,7 @@ class TransactionController extends Controller
             'payment_date' => 'required|date',
             'notes' => 'required|string|max:500',
             'currency' => 'nullable|in:MXN,USD',
+            'payment_method' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(Transaction::PAYMENT_METHODS))],
         ]);
 
         $client = Client::findOrFail($validated['client_id']);
@@ -223,6 +226,7 @@ class TransactionController extends Controller
                 'type' => 'extra',
                 'owner_id' => $ownerId,
                 'currency' => $validated['currency'] ?? 'MXN',
+                'payment_method' => $validated['payment_method'] ?? null,
             ]);
 
             $nextValue = OwnerSequence::getNextValue($ownerId);
