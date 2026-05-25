@@ -27,7 +27,7 @@ class ReportController extends Controller
         $folioFrom = $request->input('folio_from');
         $folioTo = $request->input('folio_to');
 
-        $query = \App\Models\Transaction::withTrashed()->with(['client', 'installments.paymentPlan.lot.owner']);
+        $query = \App\Models\Transaction::withTrashed()->with(['client', 'owner', 'installments.paymentPlan.lot.owner']);
 
         // LOGICA DE FILTRADO
 

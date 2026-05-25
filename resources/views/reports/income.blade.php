@@ -127,6 +127,7 @@
                                 <th class="px-6 py-4 text-left font-bold">Folio</th>
                                 <th class="px-6 py-4 text-left font-bold">Fecha de Pago</th>
                                 <th class="px-6 py-4 text-left font-bold">Cliente</th>
+                                <th class="px-6 py-4 text-left font-bold">Socio</th>
                                 <th class="px-6 py-4 text-left font-bold">Método</th>
                                 @if(auth()->user()->role === 'admin')
                                 <th class="px-6 py-4 text-left font-bold">Monto</th>
@@ -151,6 +152,16 @@
                                     <td class="px-6 py-4">
                                         <span class="text-gray-900 font-medium">{{ $transaction->client->name }}</span>
                                     </td>
+                                    <td class="px-6 py-4">
+                                        @php
+                                            $ownerName = $transaction->owner->name
+                                                ?? optional(optional(optional($transaction->installments->first())->paymentPlan)->lot)->owner->name
+                                                ?? 'N/A';
+                                        @endphp
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-semibold">
+                                            {{ $ownerName }}
+                                        </span>
+                                    </td>
                                     <td class="px-6 py-4 text-gray-700">
                                         @if($transaction->payment_method_label)
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">{{ $transaction->payment_method_label }}</span>
@@ -173,7 +184,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ auth()->user()->role === 'admin' ? 5 : 4 }}" class="px-6 py-16 text-center">
+                                    <td colspan="{{ auth()->user()->role === 'admin' ? 6 : 5 }}" class="px-6 py-16 text-center">
                                         <p class="text-lg font-semibold text-gray-900 mb-2">No hay transacciones</p>
                                         <p class="text-gray-600">No se encontraron transacciones en este período.</p>
                                     </td>

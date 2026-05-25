@@ -49,7 +49,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
 
     public function headings(): array
     {
-        return ['FOLIO', 'NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD', 'MÉTODO', 'ESTADO'];
+        return ['FOLIO', 'SOCIO', 'NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD', 'MÉTODO', 'ESTADO'];
     }
 
     public function map($transaction): array
@@ -61,6 +61,11 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
         $currency = $firstInstallment?->paymentPlan->currency ?? 'MXN';
         $lot      = $firstInstallment?->paymentPlan->lot ?? null;
 
+        // Snapshot del socio en la transacción; fallback a la cadena lote->owner
+        $ownerName = $transaction->owner->name
+            ?? optional(optional($lot)->owner)->name
+            ?? 'N/A';
+
         // Cobro extra: no aplica a cuotas, no tiene desglose capital/interés
         if ($transaction->type === 'extra') {
             $pesos = $currency === 'MXN' ? (float) $transaction->amount_paid : 0;
@@ -68,6 +73,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
 
             return [
                 $transaction->folio_number,
+                $ownerName,
                 $transaction->client->name,
                 'N/A',
                 'N/A',
@@ -127,6 +133,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
 
         return [
             $transaction->folio_number,
+            $ownerName,
             $transaction->client->name,
             $lot->lot_number   ?? 'N/A',
             $lot->block_number ?? 'N/A',
@@ -149,10 +156,10 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
     public function columnFormats(): array
     {
         return [
-            'E' => NumberFormat::FORMAT_ACCOUNTING_USD,
-            'F' => NumberFormat::FORMAT_ACCOUNTING_USD,
-            'H' => NumberFormat::FORMAT_ACCOUNTING_USD,
-            'I' => NumberFormat::FORMAT_ACCOUNTING_USD,
+            'F' => NumberFormat::FORMAT_ACCOUNTING_USD, // DLLS
+            'G' => NumberFormat::FORMAT_ACCOUNTING_USD, // PESOS
+            'I' => NumberFormat::FORMAT_ACCOUNTING_USD, // INT. DLL
+            'J' => NumberFormat::FORMAT_ACCOUNTING_USD, // INT. PESO
         ];
     }
 }
