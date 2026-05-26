@@ -267,4 +267,145 @@ class CreditBalanceTest extends TestCase
         $response->assertSessionHas('error');
         $this->assertSame(0, Transaction::count());
     }
+
+    public function test_pdf_recibo_muestra_total_pagado_no_solo_cash(): void
+    {
+        // Cliente paga 50 cash + aplica 50 de crédito sobre cuota de 100.
+        // El recibo debe mostrar "Cien pesos" (total cubierto), no "Cincuenta" (solo cash).
+        $this->client->update(['credit_balance' => 50]);
+        $installment = $this->makeInstallment(100, 1);
+
+        $this->actingAs($this->user)->post(route('transactions.store'), [
+            'client_id'    => $this->client->id,
+            'amount_paid'  => 50,
+            'payment_date' => now()->format('Y-m-d'),
+            'installments' => [$installment->id],
+            'apply_credit' => 1,
+        ]);
+
+        $tx = Transaction::first();
+        $response = $this->actingAs($this->user)->get(route('transactions.pdf', $tx));
+        $response->assertOk();
+
+        // El PDF se sirve como stream — pedimos el HTML interno via blade view
+        $html = view('transactions.pdf', ['transaction' => $tx->fresh()->load(['client', 'user', 'owner', 'installments.paymentPlan.lot', 'installments.paymentPlan.service', 'creditBalanceMovements'])])->render();
+        $this->assertStringContainsString('$100.00', $html, 'El PDF debe mostrar $100 como total pagado (cash + crédito), no $50.');
+        $this->assertStringContainsString('Incluye saldo a favor aplicado', $html, 'El PDF debe aclarar que parte vino del saldo a favor.');
+    }
+
+    public function test_pdf_recibo_con_solo_credito_aplicado_muestra_monto_correcto(): void
+    {
+        // Cliente paga 0 cash + aplica 100 crédito sobre cuota 100.
+        // El recibo debe mostrar "Cien pesos", NO "Cero".
+        $this->client->update(['credit_balance' => 100]);
+        $installment = $this->makeInstallment(100, 1);
+
+        $this->actingAs($this->user)->post(route('transactions.store'), [
+            'client_id'    => $this->client->id,
+            'amount_paid'  => 0,
+            'payment_date' => now()->format('Y-m-d'),
+            'installments' => [$installment->id],
+            'apply_credit' => 1,
+        ]);
+
+        $tx = Transaction::first()->fresh()->load(['client', 'user', 'owner', 'installments.paymentPlan.lot', 'installments.paymentPlan.service', 'creditBalanceMovements']);
+        $html = view('transactions.pdf', ['transaction' => $tx])->render();
+
+        $this->assertStringContainsString('$100.00', $html, 'PDF con solo crédito aplicado debe mostrar $100 (no $0).');
+        $this->assertStringContainsString('Incluye saldo a favor aplicado', $html);
+        $this->assertStringNotContainsString('cero pesos', strtolower($html), 'No debe decir "cero pesos" cuando el cliente cubrió la cuota.');
+    }
+
+    public function test_pdf_con_excedente_muestra_abono_a_cuenta(): void
+    {
+        $installment = $this->makeInstallment(100, 1);
+
+        $this->actingAs($this->user)->post(route('transactions.store'), [
+            'client_id'    => $this->client->id,
+            'amount_paid'  => 150,
+            'payment_date' => now()->format('Y-m-d'),
+            'installments' => [$installment->id],
+        ]);
+
+        $tx = Transaction::first()->fresh()->load(['client', 'user', 'owner', 'installments.paymentPlan.lot', 'installments.paymentPlan.service', 'creditBalanceMovements']);
+        $html = view('transactions.pdf', ['transaction' => $tx])->render();
+
+        $this->assertStringContainsString('Abono a cuenta', $html);
+        $this->assertStringContainsString('$150.00', $html);
+    }
+
+    public function test_pdf_sin_saldo_favor_renderiza_sin_lineas_extras(): void
+    {
+        // Regresión: un pago normal sin tocar saldo a favor NO debe mostrar líneas adicionales.
+        $installment = $this->makeInstallment(100, 1);
+
+        $this->actingAs($this->user)->post(route('transactions.store'), [
+            'client_id'    => $this->client->id,
+            'amount_paid'  => 100,
+            'payment_date' => now()->format('Y-m-d'),
+            'installments' => [$installment->id],
+        ]);
+
+        $tx = Transaction::first()->fresh()->load(['client', 'user', 'owner', 'installments.paymentPlan.lot', 'installments.paymentPlan.service', 'creditBalanceMovements']);
+        $html = view('transactions.pdf', ['transaction' => $tx])->render();
+
+        $this->assertStringContainsString('$100.00', $html);
+        $this->assertStringNotContainsString('Abono a cuenta', $html);
+        $this->assertStringNotContainsString('Incluye saldo a favor', $html);
+    }
+
+    public function test_vista_cliente_muestra_saldo_a_favor_cuando_existe(): void
+    {
+        $this->client->update(['credit_balance' => 75.50]);
+        // Generar un movimiento para que aparezca en la tabla
+        \App\Models\CreditBalanceMovement::create([
+            'client_id'  => $this->client->id,
+            'amount'     => 75.50,
+            'type'       => 'added',
+            'notes'      => 'Test movement',
+            'created_by' => $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('clients.show', $this->client));
+        $response->assertOk();
+        $response->assertSee('Saldo a favor');
+        $response->assertSee('Acreditado');
+    }
+
+    public function test_form_cobro_incluye_credit_balance_en_data_attribute(): void
+    {
+        $this->client->update(['credit_balance' => 200]);
+
+        $response = $this->actingAs($this->user)->get(route('transactions.create'));
+        $response->assertOk();
+        // El <option> del cliente debe tener data-credit-balance="200" para que Alpine lo lea.
+        $response->assertSee('data-credit-balance="200', false);
+    }
+
+    public function test_reporte_ingresos_suma_solo_cash_no_credito_aplicado(): void
+    {
+        // Tx1: cliente paga 100 cash sobre cuota 100 → amount_paid = 100
+        $i1 = $this->makeInstallment(100, 1);
+        $this->actingAs($this->user)->post(route('transactions.store'), [
+            'client_id'    => $this->client->id,
+            'amount_paid'  => 100,
+            'payment_date' => now()->format('Y-m-d'),
+            'installments' => [$i1->id],
+        ]);
+
+        // Tx2: cliente con 50 de crédito paga 50 cash + 50 crédito sobre cuota 100 → amount_paid = 50
+        $this->client->update(['credit_balance' => 50]);
+        $i2 = $this->makeInstallment(100, 2);
+        $this->actingAs($this->user)->post(route('transactions.store'), [
+            'client_id'    => $this->client->id,
+            'amount_paid'  => 50,
+            'payment_date' => now()->format('Y-m-d'),
+            'installments' => [$i2->id],
+            'apply_credit' => 1,
+        ]);
+
+        // Suma de amount_paid debe ser 100 + 50 = 150 (caja real), NO 200 (incluyendo crédito aplicado).
+        $totalCash = Transaction::sum('amount_paid');
+        $this->assertEqualsWithDelta(150.0, (float) $totalCash, 0.001);
+    }
 }

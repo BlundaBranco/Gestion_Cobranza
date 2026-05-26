@@ -105,6 +105,11 @@
         $creditMovements = $transaction->creditBalanceMovements ?? collect();
         $creditApplied = (float) $creditMovements->where('type', 'applied')->sum('amount'); // valor negativo
         $creditAdded   = (float) $creditMovements->where('type', 'added')->sum('amount');   // valor positivo
+
+        // Monto a mostrar en el recibo: efectivo recibido + crédito aplicado (lo que el cliente "pagó" total).
+        // amount_paid registra solo el cash (para que reportes de ingresos reflejen caja real);
+        // el recibo muestra el total pagado por el cliente para que cuadre con el desglose de cuotas.
+        $displayAmount = (float) $transaction->amount_paid + abs($creditApplied);
     @endphp
 
     @foreach ($copies as $copyIndex => $copyLabel)
@@ -156,7 +161,7 @@
                                 </tr>
                                 <tr>
                                     <td class="label">La cantidad de:</td>
-                                    <td class="content" style="font-size: 11px;">{{ number_to_words_es($transaction->amount_paid) }} ({{ $currency }})</td>
+                                    <td class="content" style="font-size: 11px;">{{ number_to_words_es($displayAmount) }} ({{ $currency }})</td>
                                 </tr>
                                 @if($transaction->payment_method_label)
                                 <tr>
@@ -200,9 +205,12 @@
                                                     </tr>
                                                 @endforeach
                                                 @if ($creditApplied < -0.005)
+                                                    {{-- Nota informativa: parte del pago vino del saldo a favor previo del cliente.
+                                                         No suma al total porque ya está incluido en el "applied" de cada cuota. --}}
                                                     <tr class="row-border">
-                                                        <td colspan="3" style="font-style: italic;">Saldo a favor aplicado</td>
-                                                        <td style="text-align: right;">{{ format_currency($creditApplied, $currency) }}</td>
+                                                        <td colspan="4" style="font-style: italic; font-size: 9px; color: #555;">
+                                                            * Incluye saldo a favor aplicado por {{ format_currency(abs($creditApplied), $currency) }}
+                                                        </td>
                                                     </tr>
                                                 @endif
                                                 @if ($creditAdded > 0.005)
@@ -244,7 +252,7 @@
                                 </td>
                                 <td style="width: 50%; vertical-align: bottom; text-align: right; font-weight: bold; font-size: 13px;">
                                     Por <span class="content" style="border-bottom: 1px solid #666; padding: 0 10px; min-width: 100px; display: inline-block; text-align: center;">
-                                        {{ format_currency($transaction->amount_paid, $currency) }}
+                                        {{ format_currency($displayAmount, $currency) }}
                                     </span>
                                 </td>
                             </tr>
