@@ -76,6 +76,21 @@ cd /var/www/gestion_cobranza && git pull origin master && composer install --no-
 - Si no estás seguro, PREGUNTÁ.
 - Comunicación con el usuario en español, código/identifiers en inglés.
 
+## Protocolo Yanet (CRÍTICO — leer SIEMPRE al inicio de cada sesión)
+
+**Antes de tomar cualquier decisión, redactar cualquier mensaje, o cotizar cualquier feature relacionado a Yanet:**
+
+1. **Buscar en engram** el log vivo de compromisos: `mem_search("gestion_cobranza/yanet-commitments-log")`. Si la búsqueda devuelve resultados, obtener el contenido completo con `mem_get_observation(id)`. Ese log tiene TODO el histórico de qué se prometió, qué se cobró, qué se entregó, qué se revirtió, y qué queda pendiente.
+2. **Si existe `Chat de WhatsApp con Yanet Landa.zip` en la raíz del proyecto**, descomprimirlo a temp y leer el `.txt` resultante — sobre todo las últimas 300 líneas. El user lo actualiza periódicamente exportando la conversación.
+3. **El zip está en `.gitignore`** — es información privada de la cliente. No commitearlo nunca.
+
+**Después de CUALQUIER interacción con Yanet** (promesa, cotización, entrega, revert, decisión, aclaración):
+
+- Actualizar inmediatamente el log de compromisos en engram (topic_key estable: `gestion_cobranza/yanet-commitments-log`).
+- Si se revierte algo que ya fue anunciado a Yanet, dejar registro EXPLÍCITO de la discrepancia entre "lo prometido" y "lo realmente entregado". Esa fue la falla del incidente credit_balance de 2026-03-30.
+
+**Regla de oro**: si una feature está en el log como "anunciada y entregada a Yanet", asumir que ella la considera pagada y operativa. Cualquier discrepancia con la realidad técnica del código es responsabilidad nuestra de resolver — sin re-cobrar y sin admitir culpa en los mensajes externos (regla absoluta de comunicación).
+
 ## Documentación
 
 - `docs/ARCHITECTURE.md` — diagrama de dominio, flujos, decisiones
