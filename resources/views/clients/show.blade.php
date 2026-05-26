@@ -80,6 +80,67 @@
                 </div>
             </div>
 
+            {{-- Saldo a favor del cliente --}}
+            @php
+                $clientCredit = (float) ($client->credit_balance ?? 0);
+                $recentCreditMovements = $client->creditBalanceMovements()
+                    ->with('transaction:id,folio_number')
+                    ->latest()->take(10)->get();
+            @endphp
+            @if ($clientCredit > 0.005 || $recentCreditMovements->isNotEmpty())
+            <div class="bg-white overflow-hidden shadow-lg sm:rounded-xl border border-emerald-200">
+                <div class="bg-gradient-to-r from-emerald-50 to-white px-6 py-4 border-b border-emerald-200">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-bold shadow-md">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900">Saldo a favor</h3>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Saldo disponible</p>
+                            <p class="text-2xl font-extrabold {{ $clientCredit > 0.005 ? 'text-emerald-600' : 'text-gray-400' }}">{{ format_currency($clientCredit, 'MXN') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @if ($recentCreditMovements->isNotEmpty())
+                <div class="p-6">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Últimos movimientos</p>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                        <table class="w-full text-sm">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left font-semibold">Fecha</th>
+                                    <th class="px-4 py-2 text-left font-semibold">Tipo</th>
+                                    <th class="px-4 py-2 text-left font-semibold">Recibo</th>
+                                    <th class="px-4 py-2 text-right font-semibold">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white">
+                                @foreach ($recentCreditMovements as $mov)
+                                <tr>
+                                    <td class="px-4 py-2 text-gray-700">{{ $mov->created_at->format('d/m/Y H:i') }}</td>
+                                    <td class="px-4 py-2">
+                                        @if ($mov->type === 'added')
+                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Acreditado</span>
+                                        @else
+                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Aplicado</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2 text-gray-700">{{ $mov->transaction->folio_number ?? '—' }}</td>
+                                    <td class="px-4 py-2 text-right font-bold {{ $mov->amount > 0 ? 'text-emerald-600' : 'text-amber-600' }}">{{ format_currency($mov->amount, 'MXN') }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+            </div>
+            @endif
+
             <!-- Tarjeta de Documentos del Cliente -->
             <div class="bg-white overflow-hidden shadow-lg sm:rounded-xl border border-gray-200">
                 <div class="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-200">

@@ -66,7 +66,7 @@
                                     <select x-model="clientId" @input="fetchInstallments()" id="client_id" name="client_id" class="select2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200" required>
                                         <option value="">Seleccione o busque un cliente</option>
                                         @foreach($clients as $client)
-                                            <option value="{{ $client->id }}" @selected(old('client_id', $selectedClientId ?? '') == $client->id)>{{ $client->name }}</option>
+                                            <option value="{{ $client->id }}" data-credit-balance="{{ $client->credit_balance ?? 0 }}" @selected(old('client_id', $selectedClientId ?? '') == $client->id)>{{ $client->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -127,6 +127,25 @@
                                     </select>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Saldo a favor disponible (sólo cuando NO es extra y hay saldo) -->
+                        <div x-show="!isExtra && creditBalance > 0" x-cloak class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-emerald-100 rounded-lg">
+                                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-emerald-800">Saldo a favor disponible</p>
+                                    <p class="text-xs text-emerald-700">Este cliente tiene <span class="font-bold" x-text="`$${creditBalance.toFixed(2)}`"></span> a su favor de pagos anteriores.</p>
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" name="apply_credit" value="1" x-model="applyCredit" class="w-5 h-5 rounded border-gray-300 text-emerald-600 shadow-sm focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+                                <span class="text-sm font-semibold text-emerald-800">Aplicar en este pago</span>
+                            </label>
                         </div>
 
                         <!-- Installments Section -->
@@ -262,6 +281,8 @@
                 loading: false,
                 searchQuery: '',
                 isExtra: {{ old('is_extra') ? 'true' : 'false' }},
+                creditBalance: 0,
+                applyCredit: {{ old('apply_credit') ? 'true' : 'false' }},
 
                 init() {
                     const self = this;
@@ -272,6 +293,7 @@
                         allowClear: true
                     }).on('change', function () {
                         self.clientId = $(this).val();
+                        self.refreshCreditBalance();
                         if (!self.isExtra) self.fetchInstallments();
                     });
 
@@ -288,9 +310,18 @@
 
                     if (this.clientId) {
                         $('#client_id').val(this.clientId).trigger('change.select2');
+                        this.refreshCreditBalance();
                         if (!this.isExtra) this.fetchInstallments();
                     } else {
                         this.installments = [];
+                    }
+                },
+
+                refreshCreditBalance() {
+                    const selected = document.querySelector('#client_id option[value="' + this.clientId + '"]');
+                    this.creditBalance = selected ? parseFloat(selected.getAttribute('data-credit-balance') || 0) : 0;
+                    if (this.creditBalance <= 0) {
+                        this.applyCredit = false;
                     }
                 },
 

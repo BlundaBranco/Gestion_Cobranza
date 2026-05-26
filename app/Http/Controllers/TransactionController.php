@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\CreditBalanceMovement;
 use App\Models\Installment;
 use App\Models\Lot;
 use App\Models\Transaction;
@@ -61,24 +62,53 @@ class TransactionController extends Controller
         
     public function destroy(Transaction $transaction)
     {
-        DB::transaction(function () use ($transaction) {
-            // 1. Revertir el estado de las cuotas y poner amount_applied a 0 en pivot
-            foreach ($transaction->installments as $installment) {
-                if ($installment->status === 'pagada') {
-                    $installment->status = $installment->due_date < now() ? 'vencida' : 'pendiente';
-                    $installment->save();
-                }
-                // Preservar relación pero anular el monto aplicado (mantiene auditoría del concepto)
-                $transaction->installments()->updateExistingPivot($installment->id, ['amount_applied' => 0]);
-            }
+        try {
+            DB::transaction(function () use ($transaction) {
+                // 1. Revertir movimientos de saldo a favor si la transacción los generó
+                $transaction->loadMissing('creditBalanceMovements.client');
+                foreach ($transaction->creditBalanceMovements as $movement) {
+                    $client = $movement->client;
+                    if (! $client) {
+                        continue;
+                    }
 
-            // 2. Marcar como cancelada (soft delete + audit)
-            $transaction->update([
-                'status' => 'cancelled',
-                'cancelled_by' => auth()->id(),
-            ]);
-            $transaction->delete();
-        });
+                    if ($movement->type === 'added') {
+                        // La transacción había sumado saldo al cliente — al cancelar, restarlo.
+                        // Si el cliente ya gastó ese crédito, no se puede revertir sin dejar saldo negativo.
+                        if ((float) $client->credit_balance + 0.005 < (float) $movement->amount) {
+                            throw ValidationException::withMessages([
+                                'cancellation' => 'No se puede cancelar: el saldo a favor generado por este pago ya fue parcialmente o totalmente utilizado por el cliente en pagos posteriores.',
+                            ]);
+                        }
+                        $client->credit_balance = (float) $client->credit_balance - (float) $movement->amount;
+                    } else {
+                        // Movimiento "applied" — su amount es negativo. Al revertir, devolver al cliente.
+                        $client->credit_balance = (float) $client->credit_balance + abs((float) $movement->amount);
+                    }
+                    $client->save();
+                    $movement->delete();
+                }
+
+                // 2. Revertir el estado de las cuotas y poner amount_applied a 0 en pivot
+                foreach ($transaction->installments as $installment) {
+                    if ($installment->status === 'pagada') {
+                        $installment->status = $installment->due_date < now() ? 'vencida' : 'pendiente';
+                        $installment->save();
+                    }
+                    // Preservar relación pero anular el monto aplicado (mantiene auditoría del concepto)
+                    $transaction->installments()->updateExistingPivot($installment->id, ['amount_applied' => 0]);
+                }
+
+                // 3. Marcar como cancelada (soft delete + audit)
+                $transaction->update([
+                    'status' => 'cancelled',
+                    'cancelled_by' => auth()->id(),
+                ]);
+                $transaction->delete();
+            });
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->errors()['cancellation'][0] ?? 'No se pudo cancelar la transacción.');
+        }
 
         return back()->with('success', 'Transacción cancelada y estados revertidos correctamente.');
     }
@@ -104,27 +134,41 @@ class TransactionController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
-            'amount_paid' => 'required|numeric|min:0.01',
+            'amount_paid' => 'required|numeric|min:0',
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
             'payment_method' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(Transaction::PAYMENT_METHODS))],
             'installments' => 'required|array',
             'installments.*' => 'exists:installments,id',
+            'apply_credit' => 'nullable|boolean',
         ]);
 
-        $amountPaid = floatval($validated['amount_paid']);
+        $cashAmount = floatval($validated['amount_paid']);
+        $applyCredit = $request->boolean('apply_credit');
         $selectedInstallments = Installment::with('transactions')->find($validated['installments']);
         $client = Client::findOrFail($validated['client_id']);
-        $amountToApply = $amountPaid;
+        $creditAvailable = $applyCredit ? (float) $client->credit_balance : 0;
+
+        // Suma efectiva a aplicar (efectivo + crédito disponible si fue marcado).
+        // Si el cliente sólo aplica crédito sin efectivo, $cashAmount = 0 es válido.
+        if (($cashAmount + $creditAvailable) < 0.01) {
+            return back()
+                ->with('error', 'El monto total a aplicar (efectivo + saldo a favor) debe ser mayor a cero.')
+                ->withInput();
+        }
+
+        $amountToApply = $cashAmount + $creditAvailable;
         $transaction = null;
 
         try {
             DB::beginTransaction();
 
+            // amount_paid registra SOLO el efectivo recibido (ingreso real de caja).
+            // El crédito aplicado se rastrea por separado vía CreditBalanceMovement.
             $transaction = $client->transactions()->create([
-                'amount_paid' => $amountToApply,
+                'amount_paid' => $cashAmount,
                 'payment_date' => $validated['payment_date'],
-                'notes' => $validated['notes'],
+                'notes' => $validated['notes'] ?? null,
                 'payment_method' => $validated['payment_method'] ?? null,
                 'user_id' => auth()->id(),
             ]);
@@ -178,6 +222,42 @@ class TransactionController extends Controller
             // Guardar el owner al momento de creación para mantener trazabilidad histórica
             $transaction->owner_id = $ownerId;
             $transaction->save();
+
+            // --- GESTIÓN DE SALDO A FAVOR ---
+            // El crédito se consume PRIMERO al aplicarse a cuotas; el cash cubre lo restante.
+            // Sobrante al final del loop = excedente de cash (porque el crédito ya estaba "comprometido").
+            $totalConsumed = ($cashAmount + $creditAvailable) - $amountToApply;
+            $creditConsumed = min($creditAvailable, $totalConsumed);
+            $cashExcess = max(0, $cashAmount - ($totalConsumed - $creditConsumed));
+
+            if ($creditConsumed > 0.005) {
+                $client->credit_balance = (float) $client->credit_balance - $creditConsumed;
+                CreditBalanceMovement::create([
+                    'client_id'      => $client->id,
+                    'amount'         => -$creditConsumed,
+                    'type'           => 'applied',
+                    'transaction_id' => $transaction->id,
+                    'notes'          => 'Saldo a favor aplicado al pago ' . $transaction->folio_number,
+                    'created_by'     => auth()->id(),
+                ]);
+            }
+
+            if ($cashExcess > 0.005) {
+                $client->credit_balance = (float) $client->credit_balance + $cashExcess;
+                CreditBalanceMovement::create([
+                    'client_id'      => $client->id,
+                    'amount'         => $cashExcess,
+                    'type'           => 'added',
+                    'transaction_id' => $transaction->id,
+                    'notes'          => 'Excedente del pago ' . $transaction->folio_number . ' registrado como saldo a favor',
+                    'created_by'     => auth()->id(),
+                ]);
+            }
+
+            if ($creditConsumed > 0.005 || $cashExcess > 0.005) {
+                $client->save();
+            }
+            // --- FIN GESTIÓN DE SALDO A FAVOR ---
 
             DB::commit();
 

@@ -100,6 +100,11 @@
         $conceptStyle = (strlen($conceptoTexto) > 80 || $installments->count() > 4) ? 'font-size: 10px;' : '';
 
         $copies = ['ORIGINAL CLIENTE', 'COPIA EMPRESA'];
+
+        // Movimientos de saldo a favor asociados a esta transacción (excedente generado o crédito aplicado)
+        $creditMovements = $transaction->creditBalanceMovements ?? collect();
+        $creditApplied = (float) $creditMovements->where('type', 'applied')->sum('amount'); // valor negativo
+        $creditAdded   = (float) $creditMovements->where('type', 'added')->sum('amount');   // valor positivo
     @endphp
 
     @foreach ($copies as $copyIndex => $copyLabel)
@@ -194,6 +199,18 @@
                                                         <td style="text-align: right;">{{ format_currency($applied, $currency) }}</td>
                                                     </tr>
                                                 @endforeach
+                                                @if ($creditApplied < -0.005)
+                                                    <tr class="row-border">
+                                                        <td colspan="3" style="font-style: italic;">Saldo a favor aplicado</td>
+                                                        <td style="text-align: right;">{{ format_currency($creditApplied, $currency) }}</td>
+                                                    </tr>
+                                                @endif
+                                                @if ($creditAdded > 0.005)
+                                                    <tr class="row-border">
+                                                        <td colspan="3" style="font-style: italic;">Abono a cuenta (saldo a favor)</td>
+                                                        <td style="text-align: right;">{{ format_currency($creditAdded, $currency) }}</td>
+                                                    </tr>
+                                                @endif
                                             </tbody>
                                         </table>
 

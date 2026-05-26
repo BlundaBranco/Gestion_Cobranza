@@ -9,7 +9,11 @@ class Client extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'email', 'phone', 'phone_label', 'additional_phones', 'address', 'notes',];
+    protected $fillable = ['name', 'email', 'phone', 'phone_label', 'additional_phones', 'address', 'notes', 'credit_balance'];
+
+    protected $casts = [
+        'credit_balance' => 'decimal:2',
+    ];
 
     public function lots()
     {
@@ -26,4 +30,8 @@ class Client extends Model
         return $this->hasMany(ClientDocument::class);
     }
 
+    public function creditBalanceMovements()
+    {
+        return $this->hasMany(CreditBalanceMovement::class);
+    }
 }
