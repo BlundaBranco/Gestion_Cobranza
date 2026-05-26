@@ -17,16 +17,19 @@ return new class extends Migration
             $table->foreign('owner_id')->references('id')->on('owners')->nullOnDelete();
         });
 
-        // Backfill: poblar owner_id desde la cadena installments → lot → owner
-        DB::statement("
-            UPDATE transactions t
-            JOIN installment_transaction it ON it.transaction_id = t.id
-            JOIN installments i ON i.id = it.installment_id
-            JOIN payment_plans pp ON pp.id = i.payment_plan_id
-            JOIN lots l ON l.id = pp.lot_id
-            SET t.owner_id = l.owner_id
-            WHERE t.owner_id IS NULL
-        ");
+        // Backfill: poblar owner_id desde la cadena installments → lot → owner.
+        // El UPDATE...JOIN es sintaxis MySQL; SQLite (tests) no lo soporta y no necesita backfill (DB vacía).
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("
+                UPDATE transactions t
+                JOIN installment_transaction it ON it.transaction_id = t.id
+                JOIN installments i ON i.id = it.installment_id
+                JOIN payment_plans pp ON pp.id = i.payment_plan_id
+                JOIN lots l ON l.id = pp.lot_id
+                SET t.owner_id = l.owner_id
+                WHERE t.owner_id IS NULL
+            ");
+        }
     }
 
     public function down(): void

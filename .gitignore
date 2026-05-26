@@ -29,5 +29,12 @@ CLAUDE.local.md
 # Claude Code local settings (pueden contener tokens o comandos con credenciales)
 .claude/settings.local.json
 
+# Claude Code hooks locales del usuario — recordatorios de sesión, no parte del proyecto
+.claude/hooks/
+
 # Screenshots con datos de clientes reales — agregar versión demo antes de commitear
 /screenshots/
+
+# Exportaciones de WhatsApp del cliente — privadas, no commitear nunca
+Chat de WhatsApp*.zip
+Chat de WhatsApp*.txt

@@ -67,4 +67,8 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'cancelled_by');
     }
 
+    public function creditBalanceMovements()
+    {
+        return $this->hasMany(CreditBalanceMovement::class);
+    }
 }
