@@ -105,6 +105,22 @@
                         </div>
                     </div>
                 </div>
+                @if ($clientCredit > 0.005)
+                <div class="px-6 pt-5 pb-1">
+                    <div class="rounded-lg bg-emerald-50 border border-emerald-200 p-4 flex gap-3">
+                        <div class="shrink-0 mt-0.5">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="text-sm text-emerald-900 space-y-1">
+                            <p><span class="font-bold">Este saldo NO se descuenta automáticamente</span> de la deuda pendiente del cliente — queda reservado a su nombre.</p>
+                            <p>Para usarlo, registrá un nuevo cobro del cliente: en el formulario te va a aparecer un aviso verde con el saldo disponible y un <span class="font-bold">checkbox "Aplicar en este pago"</span>. Si lo marcás, el saldo se descuenta del cobro y el cliente solo trae la diferencia.</p>
+                            <p class="text-xs text-emerald-700 pt-1">El saldo se generó porque el cliente pagó de más en una cobranza anterior. No afecta el "Total Pagado" del lote hasta que se aplique a un nuevo pago.</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
                 @if ($recentCreditMovements->isNotEmpty())
                 <div class="p-6">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Últimos movimientos</p>
