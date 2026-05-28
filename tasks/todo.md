@@ -1,33 +1,36 @@
 # Tareas activas
 
-## ✅ Completadas en esta sesión (2026-04-15)
+## ✅ Completadas 2026-05-27
 
-### Task 1 — PDF recibo doble copia + concepto detallado en Excel
-- Commit `4c6ecc5` pusheado a `origin master`.
-- PDF duplica ORIGINAL-CLIENTE / COPIA-EMPRESA con línea de corte; fix overflow signature-line; fuente +1px.
-- `IncomeExport` y `TransactionHistoryExport`: columna MENSUALIDAD ahora muestra `#N - Mes Año`.
-- **Pendiente:** deploy manual del usuario + QA de el cliente.
+- [x] Sub-agrupar cuotas por servicio en form de cobro (`transactions/create.blade.php`). Commit `7c73176`. Deployado.
+- [x] Bloque explicativo en card de saldo a favor (`clients/show.blade.php`). Commit `7c73176`. Deployado.
+- [x] Mensaje a Yanet redactado y entregado al user.
 
-### Task 2 — Módulo Cobros Extras
-- Commit `3aef5d2` local, NO pusheado — espera feedback de Task 1.
-- Columna `type` en transactions + fork en `TransactionController@store` a `storeExtra()`.
-- UI con toggle Alpine, selector de Lote, `notes` requerido.
-- Vista PDF separada `pdf_extra.blade.php` con doble copia.
-- Reports muestran `EXTRA: {notes}`.
+## ✅ Completadas 2026-05-26
 
-## 🟡 Pendiente de acción del usuario
+- [x] Feature saldo a favor re-implementado (gratis, garantía del incidente 30/3). Commits `6c40dbe`, `95700e2`. Deployado.
+- [x] Protocolo Yanet (CLAUDE.md + engram log + hook SessionStart).
 
-- [ ] Deploy Task 1 al servidor (comando en `CLAUDE.md`).
-- [ ] QA con el cliente — probar doble copia PDF + Excel concepto.
-- [ ] Aprobación para pushear Task 2 (`git push origin 3aef5d2:master`) y deployar.
+## ✅ Completadas 2026-05-25
 
-## 🟢 Pendientes de decisión
+- [x] Método de pago en recibos (cobrado 70 USD). Deployado.
+- [x] Comando `lotes:traspasar` + traspaso lote 25 mz 9 → SECC I. Gratis.
+- [x] Columna Socio en reporte de ingresos. Aprobado 20 USD, pendiente de cobro.
 
-- [ ] Moneda en cobros extras: actualmente default MXN. Si el cliente cobra traspasos en USD, agregar selector USD/MXN.
-- [ ] Re-evaluar si se retoma "Saldo a favor" o se cierra definitivamente.
+## 🟡 Pendiente de respuesta de Yanet
 
-## 🔵 Deuda técnica detectada (sin prioridad aún)
+- [ ] Confirmación visual agrupación luz/terreno + nota explicativa saldo a favor (deployado 27/5).
+- [ ] Confirmación visual método de pago (deployado 25/5).
+- [ ] Excel marcado de los 110 folios duplicados (entregado 12/5).
+- [ ] Aclaración "compartidos" en SECC II (folio 020063 en Margarita y José María). Bloquea fase 2 del bug de duplicados.
 
-- [ ] `Transaction::status` campo defaultea `active` pero no se explicita en el `store()` — funciona por default de DB pero frágil si cambia la migración.
-- [ ] `ReportController@incomeReport` tiene indentación inconsistente (línea 61) — limpieza menor.
-- [ ] `docs/SPEC.md` describe Task 2 como ✅ pero todavía no está en prod — al deployar actualizar la nota.
+## 🟢 Pendiente de cobro
+
+- [ ] $20 USD por columna Socio en reporte (aprobado 24/5, deployado 25/5, no cobrado).
+
+## 🔵 Deuda técnica (sin prioridad)
+
+- [ ] `UserFactory` sin `username` — rompe 22 tests scaffold de Auth.
+- [ ] Migration `2026_04_10_014707_*` con `UPDATE...JOIN` MySQL-only — workaround vivo (envuelto en `if (DB::getDriverName() !== 'sqlite')`).
+- [ ] Branch `feat/saldo-favor` puede borrarse (`git branch -d feat/saldo-favor`).
+- [ ] `Transaction::status` defaultea por DB, no explicitado en `store()`.
