@@ -48,7 +48,10 @@ class ReportController extends Controller
         // 2. Filtro por Fechas
         // Si se está filtrando por folio, ignoramos fechas — el folio es prioritario
         // y los folios pueden ser de meses anteriores al rango por defecto.
-        if (!$filteringByFolio && $request->filled('start_date') && $request->filled('end_date')) {
+        // Si NO se filtra por folio, aplicamos SIEMPRE el rango (con default = mes actual),
+        // igual que IncomeExport. Sin esto, entrar sin parámetros traía todo el histórico
+        // (miles de transactions con relaciones anidadas) y agotaba la memoria de PHP al render.
+        if (!$filteringByFolio) {
             $query->whereBetween('payment_date', [$startDate, $endDate]);
         }
 
