@@ -70,7 +70,8 @@ class LotController extends Controller
     public function create()
     {
         $clients = Client::orderBy('name')->get();
-        $owners = \App\Models\Owner::orderBy('name')->get();
+        // Solo socios reales — ELECTRIFICACIÓN y otros emisores de folios no son dueños de lote.
+        $owners = \App\Models\Owner::socios()->orderBy('name')->get();
         return view('lots.create', compact('clients', 'owners'));
     }
 

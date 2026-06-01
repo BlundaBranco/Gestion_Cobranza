@@ -145,9 +145,31 @@ class TransactionController extends Controller
 
         $cashAmount = floatval($validated['amount_paid']);
         $applyCredit = $request->boolean('apply_credit');
-        $selectedInstallments = Installment::with('transactions')->find($validated['installments']);
+        $selectedInstallments = Installment::with(['transactions', 'paymentPlan.service'])->find($validated['installments']);
         $client = Client::findOrFail($validated['client_id']);
         $creditAvailable = $applyCredit ? (float) $client->credit_balance : 0;
+
+        // --- EMISOR DE FOLIO POR SERVICIO ---
+        // Un servicio puede tener emisor de folios propio (services.billing_owner_id),
+        // p. ej. ELECTRIFICACIÓN. No se mezclan en un mismo recibo cuotas de un servicio
+        // con emisor propio junto con cuotas de otro emisor (otro servicio o un socio):
+        // cada uno lleva su propia numeración, así que va en cobros separados.
+        $billingOwnerIds = $selectedInstallments
+            ->map(fn ($i) => $i->paymentPlan?->service?->billing_owner_id)
+            ->unique()
+            ->values();
+
+        $ownBilling = $billingOwnerIds->filter(fn ($v) => ! is_null($v));
+        $hasNormal  = $billingOwnerIds->contains(null);
+
+        if ($ownBilling->isNotEmpty() && ($hasNormal || $ownBilling->count() > 1)) {
+            return back()
+                ->with('error', 'No se puede cobrar en un mismo recibo cuotas de un servicio con numeración propia (ej. Electrificación) junto con otras. Cobrá ese servicio por separado para que tome su propio folio.')
+                ->withInput();
+        }
+
+        // Emisor del folio: el propio del servicio si lo tiene; si no, el socio del lote (más abajo).
+        $billingOwnerId = $ownBilling->first();
 
         // Suma efectiva a aplicar (efectivo + crédito disponible si fue marcado).
         // Si el cliente sólo aplica crédito sin efectivo, $cashAmount = 0 es válido.
@@ -201,11 +223,17 @@ class TransactionController extends Controller
 
             // --- LÓGICA DE FOLIO MULTI-EMISOR ---
             // Debe ejecutarse DENTRO de la transacción DB para que lockForUpdate sea efectivo.
-            $ownerId = null;
-            $firstInstallment = $installmentsToProcess->first();
-            if ($firstInstallment) {
-                $lot = $firstInstallment->paymentPlan->lot ?? null;
-                $ownerId = $lot?->owner_id;
+            if ($billingOwnerId) {
+                // Servicio con emisor propio (ej. ELECTRIFICACIÓN): folio de su secuencia.
+                $ownerId = $billingOwnerId;
+            } else {
+                // Comportamiento normal: folio del socio dueño del lote de la primera cuota.
+                $ownerId = null;
+                $firstInstallment = $installmentsToProcess->first();
+                if ($firstInstallment) {
+                    $lot = $firstInstallment->paymentPlan->lot ?? null;
+                    $ownerId = $lot?->owner_id;
+                }
             }
 
             if ($ownerId) {
