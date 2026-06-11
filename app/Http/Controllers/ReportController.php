@@ -27,7 +27,7 @@ class ReportController extends Controller
         $folioFrom = $request->input('folio_from');
         $folioTo = $request->input('folio_to');
 
-        $query = \App\Models\Transaction::withTrashed()->with(['client', 'owner', 'installments.paymentPlan.lot.owner']);
+        $query = \App\Models\Transaction::withTrashed()->with(['client', 'owner', 'user', 'installments.paymentPlan.lot.owner']);
 
         // LOGICA DE FILTRADO
 
@@ -106,8 +106,6 @@ class ReportController extends Controller
 
     public function export(Request $request)
     {
-        abort_unless(auth()->user()->role === 'admin', 403);
-
         $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
         $ownerId = $request->input('owner_id');
@@ -115,7 +113,11 @@ class ReportController extends Controller
         $folioTo = $request->input('folio_to');
         $paymentMethod = $request->input('payment_method');
 
-        return Excel::download(new IncomeExport($startDate, $endDate, $ownerId, $folioFrom, $folioTo, $paymentMethod), 'reporte_ingresos.xlsx');
+        // Admin exporta todo; no-admin solo descarga su propio corte:
+        // el filtro por su user_id se fuerza server-side, no es modificable por URL.
+        $userId = auth()->user()->isAdmin() ? null : auth()->id();
+
+        return Excel::download(new IncomeExport($startDate, $endDate, $ownerId, $folioFrom, $folioTo, $paymentMethod, $userId), 'reporte_ingresos.xlsx');
     }
 
     public function exportOverdue(Request $request)

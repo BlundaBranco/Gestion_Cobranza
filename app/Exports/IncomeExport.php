@@ -19,8 +19,9 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
     protected $folioFrom;
     protected $folioTo;
     protected $paymentMethod;
+    protected $userId;
 
-    public function __construct($startDate, $endDate, $ownerId = null, $folioFrom = null, $folioTo = null, $paymentMethod = null)
+    public function __construct($startDate, $endDate, $ownerId = null, $folioFrom = null, $folioTo = null, $paymentMethod = null, $userId = null)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
@@ -28,6 +29,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
         $this->folioFrom = $folioFrom;
         $this->folioTo = $folioTo;
         $this->paymentMethod = $paymentMethod;
+        $this->userId = $userId;
     }
 
     public function query()
@@ -36,6 +38,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
             ->with([
                 'client',
                 'owner',
+                'user',
                 'installments.paymentPlan.lot',
                 'installments.transactions',
             ])
@@ -44,12 +47,13 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
             ->when(!$this->folioFrom && !$this->folioTo, fn($q) => $q->whereBetween('payment_date', [$this->startDate, $this->endDate]))
             ->when($this->ownerId, fn($q) => $q->where('owner_id', $this->ownerId))
             ->when($this->paymentMethod && array_key_exists($this->paymentMethod, Transaction::PAYMENT_METHODS), fn($q) => $q->where('payment_method', $this->paymentMethod))
+            ->when($this->userId, fn($q) => $q->where('user_id', $this->userId))
             ->orderBy('payment_date', 'desc');
     }
 
     public function headings(): array
     {
-        return ['FOLIO', 'SOCIO', 'NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD', 'MÉTODO', 'ESTADO'];
+        return ['FOLIO', 'SOCIO', 'NOMBRE', 'LOTE', 'MZ', 'DLLS', 'PESOS', 'FECHA', 'INT. DLL', 'INT. PESO', 'MENSUALIDAD', 'MÉTODO', 'USUARIO', 'ESTADO'];
     }
 
     public function map($transaction): array
@@ -84,6 +88,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
                 0,
                 'EXTRA: ' . ($transaction->notes ?? ''),
                 $transaction->payment_method_label ?? '',
+                $transaction->user->name ?? 'N/A',
                 $transaction->trashed() ? 'Cancelado' : 'Activo',
             ];
         }
@@ -144,6 +149,7 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
             $intPeso,
             $concepto,
             $transaction->payment_method_label ?? '',
+            $transaction->user->name ?? 'N/A',
             $transaction->trashed() ? 'Cancelado' : 'Activo',
         ];
     }

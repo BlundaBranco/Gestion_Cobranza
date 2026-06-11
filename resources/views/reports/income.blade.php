@@ -79,15 +79,16 @@
                         </div>
                     </div>
 
-                    @if(auth()->user()->role === 'admin')
-                    {{-- Botón Exportar --}}
-                    <div class="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                    {{-- Botón Exportar: admin exporta todo; no-admin descarga solo su propio corte --}}
+                    <div class="mt-4 pt-4 border-t border-gray-100 flex flex-col items-end gap-1">
                         <a href="{{ route('reports.export', request()->query()) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500 transition shadow-sm">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            Exportar Excel
+                            {{ auth()->user()->role === 'admin' ? 'Exportar Excel' : 'Descargar mi corte' }}
                         </a>
+                        @if(auth()->user()->role !== 'admin')
+                            <p class="text-xs text-gray-500">El corte incluye únicamente los cobros registrados por tu usuario.</p>
+                        @endif
                     </div>
-                    @endif
                 </form>
             </div>
 
@@ -129,6 +130,7 @@
                                 <th class="px-6 py-4 text-left font-bold">Cliente</th>
                                 <th class="px-6 py-4 text-left font-bold">Socio</th>
                                 <th class="px-6 py-4 text-left font-bold">Método</th>
+                                <th class="px-6 py-4 text-left font-bold">Usuario</th>
                                 @if(auth()->user()->role === 'admin')
                                 <th class="px-6 py-4 text-left font-bold">Monto</th>
                                 @endif
@@ -169,6 +171,9 @@
                                             <span class="text-gray-400">—</span>
                                         @endif
                                     </td>
+                                    <td class="px-6 py-4 text-gray-700">
+                                        {{ $transaction->user->name ?? 'N/A' }}
+                                    </td>
                                     @if(auth()->user()->role === 'admin')
                                     <td class="px-6 py-4 font-bold {{ $isCancelled ? 'line-through text-gray-400' : 'text-green-600' }}">
                                         @php
@@ -184,7 +189,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ auth()->user()->role === 'admin' ? 6 : 5 }}" class="px-6 py-16 text-center">
+                                    <td colspan="{{ auth()->user()->role === 'admin' ? 7 : 6 }}" class="px-6 py-16 text-center">
                                         <p class="text-lg font-semibold text-gray-900 mb-2">No hay transacciones</p>
                                         <p class="text-gray-600">No se encontraron transacciones en este período.</p>
                                     </td>
@@ -196,4 +201,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>R
+</x-app-layout>
