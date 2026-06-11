@@ -12,7 +12,8 @@ class LotController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Lot::with(['client', 'owner', 'paymentPlans.service']);
+        // Solo planes activos: los cancelados (lote revendido) no suman deuda ni se listan
+        $query = Lot::with(['client', 'owner', 'paymentPlans' => fn ($q) => $q->where('status', 'active'), 'paymentPlans.service']);
 
         if ($request->filled('search')) {
             $search = $request->search;

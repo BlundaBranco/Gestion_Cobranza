@@ -1,5 +1,7 @@
-@if($lot->paymentPlans->isNotEmpty())
-    @php $plansByCurrency = $lot->paymentPlans->groupBy('currency'); @endphp
+{{-- Solo planes activos: la deuda de un plan cancelado (lote revendido) no suma --}}
+@php $activeSummaryPlans = $lot->paymentPlans->where('status', 'active'); @endphp
+@if($activeSummaryPlans->isNotEmpty())
+    @php $plansByCurrency = $activeSummaryPlans->groupBy('currency'); @endphp
     @foreach ($plansByCurrency as $currency => $plans)
         @php
             $s = [

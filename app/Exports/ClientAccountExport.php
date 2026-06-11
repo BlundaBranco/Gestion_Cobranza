@@ -21,6 +21,9 @@ class ClientAccountExport implements FromView, ShouldAutoSize, WithStyles
     public function view(): View
     {
         $this->client->load([
+            // Solo planes activos: un plan cancelado (lote revendido) no debe
+            // aparecer en el estado de cuenta — ni su deuda ni sus pagos.
+            'lots.paymentPlans' => fn ($q) => $q->where('status', 'active'),
             'lots.paymentPlans.service',
             'lots.paymentPlans.installments.transactions',
         ]);

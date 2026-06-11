@@ -301,6 +301,47 @@ class PlanCancellationTest extends TestCase
         $response->assertSee('Este lote no tiene planes de pago.');
     }
 
+    public function test_estado_de_cuenta_excel_no_hereda_plan_cancelado_al_cliente_nuevo(): void
+    {
+        $installment = $this->makeInstallment(1000, 1);
+        $this->cobrar(1000, $installment);
+        $this->makeInstallment(1000, 2); // cuota impaga: deuda del titular viejo
+        $this->cancelar();
+
+        $newClient = Client::factory()->create();
+        $this->actingAs($this->admin)->post(route('lots.transfer', $this->lot), [
+            'new_client_id' => $newClient->id,
+            'transfer_date' => now()->format('Y-m-d'),
+        ]);
+
+        // El estado de cuenta del comprador nuevo no debe incluir deuda ni pagos del plan cancelado
+        $data = (new \App\Exports\ClientAccountExport($newClient->fresh()))->view()->getData();
+        $this->assertSame([], $data['lotSummaries'][$this->lot->id] ?? []);
+    }
+
+    public function test_indice_de_lotes_no_muestra_deuda_de_plan_cancelado(): void
+    {
+        $this->makeInstallment(1000, 1); // impaga
+        $this->cancelar();
+
+        $response = $this->actingAs($this->admin)->get(route('lots.index'));
+
+        $response->assertOk();
+        $response->assertDontSee($this->service->name);
+    }
+
+    public function test_resumen_financiero_del_lote_excluye_plan_cancelado(): void
+    {
+        $this->makeInstallment(1000, 1); // impaga
+        $this->cancelar();
+
+        $response = $this->actingAs($this->admin)->get(route('lots.edit', $this->lot));
+
+        $response->assertOk();
+        $response->assertDontSee('Deuda Pendiente'); // sin planes activos, el resumen no renderiza
+        $response->assertSee('Planes cancelados');   // el historial sí
+    }
+
     public function test_reporte_de_vencidas_excluye_planes_cancelados(): void
     {
         $installment = $this->makeInstallment(1000, 1, dueDate: now()->subMonths(2)->format('Y-m-d'));

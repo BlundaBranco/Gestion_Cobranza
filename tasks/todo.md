@@ -1,36 +1,56 @@
 # Tareas activas
 
+## 🟠 En curso 2026-06-11 — pack 190 USD (NO deployado aún)
+
+- [x] Columna Usuario en reporte de ingresos + Excel. Commit `2d44e89`. (pack 50 USD con cortes)
+- [x] Corte diario descargable para no-admin (filtro forzado por su user_id, sin totales). Commit `2d44e89`.
+- [x] Marca REIMPRESIÓN en recibos desde la 2da impresión (`print_count` + badge en ambos PDFs). Commit `f10103c`. (40 USD)
+- [x] Cancelación de plan de pago conservando historial + reventa de lote. Commit `8af2aff`. (100 USD)
+- [x] Suite completa en verde (84/84): `username` en UserFactory + tests scaffold alineados. Commit `c39c186`.
+- [ ] Review adversarial del diff — aplicar fixes confirmados si los hay.
+- [ ] **Deploy a prod** (requiere `migrate --force`: 2 migrations nuevas). Esperando OK del user.
+- [ ] Avisar a Yanet que está entregado (mensajes redactados).
+
+## ✅ Completadas 2026-06-01
+
+- [x] Traspaso lote 212 (Guadalupe) EMIGDIO→SECC I, folios 31-46. Garantía. Deployado.
+- [x] Fix reporte de ingresos OOM (error 500). Commit `5199ede`. Deployado. Yanet confirmó.
+- [x] Numeración propia Electrificación + migración 14 cobros. Merge `ffcad3a`. Deployado. (110 USD)
+
 ## ✅ Completadas 2026-05-27
 
-- [x] Sub-agrupar cuotas por servicio en form de cobro (`transactions/create.blade.php`). Commit `7c73176`. Deployado.
-- [x] Bloque explicativo en card de saldo a favor (`clients/show.blade.php`). Commit `7c73176`. Deployado.
-- [x] Mensaje a Yanet redactado y entregado al user.
+- [x] Sub-agrupar cuotas por servicio en form de cobro. Commit `7c73176`. Deployado.
+- [x] Bloque explicativo en card de saldo a favor. Commit `7c73176`. Deployado.
 
 ## ✅ Completadas 2026-05-26
 
-- [x] Feature saldo a favor re-implementado (gratis, garantía del incidente 30/3). Commits `6c40dbe`, `95700e2`. Deployado.
+- [x] Feature saldo a favor re-implementado (garantía incidente 30/3). Deployado.
 - [x] Protocolo Yanet (CLAUDE.md + engram log + hook SessionStart).
 
 ## ✅ Completadas 2026-05-25
 
 - [x] Método de pago en recibos (cobrado 70 USD). Deployado.
 - [x] Comando `lotes:traspasar` + traspaso lote 25 mz 9 → SECC I. Gratis.
-- [x] Columna Socio en reporte de ingresos. Aprobado 20 USD, pendiente de cobro.
+- [x] Columna Socio en reporte de ingresos (20 USD). Deployado.
 
 ## 🟡 Pendiente de respuesta de Yanet
 
-- [ ] Confirmación visual agrupación luz/terreno + nota explicativa saldo a favor (deployado 27/5).
+- [ ] Confirmación visual electrificación (entregado 1/6).
+- [ ] Confirmación visual agrupación luz/terreno + nota saldo a favor (deployado 27/5).
 - [ ] Confirmación visual método de pago (deployado 25/5).
 - [ ] Excel marcado de los 110 folios duplicados (entregado 12/5).
-- [ ] Aclaración "compartidos" en SECC II (folio 020063 en Margarita y José María). Bloquea fase 2 del bug de duplicados.
+- [ ] Aclaración "compartidos" en SECC II (folio 020063). Bloquea fase 2 del bug de duplicados.
 
 ## 🟢 Pendiente de cobro
 
-- [ ] $20 USD por columna Socio en reporte (aprobado 24/5, deployado 25/5, no cobrado).
+- [ ] $190 USD pack 4 features — Yanet deposita el mes próximo (acordado 9/6).
+- [ ] $110 USD electrificación — user dijo que está cubierto, verificar.
+- [ ] $20 USD columna Socio (aprobado 24/5) — verificar si entró en algún pago.
 
 ## 🔵 Deuda técnica (sin prioridad)
 
-- [ ] `UserFactory` sin `username` — rompe 22 tests scaffold de Auth.
-- [ ] Migration `2026_04_10_014707_*` con `UPDATE...JOIN` MySQL-only — workaround vivo (envuelto en `if (DB::getDriverName() !== 'sqlite')`).
-- [ ] Branch `feat/saldo-favor` puede borrarse (`git branch -d feat/saldo-favor`).
+- [x] ~~`UserFactory` sin `username`~~ — resuelto en `c39c186`, suite 84/84 verde.
+- [ ] Migration `2026_04_10_014707_*` con `UPDATE...JOIN` MySQL-only — workaround vivo.
+- [ ] Branches `feat/saldo-favor` y `feat/electrificacion` pueden borrarse.
 - [ ] `Transaction::status` defaultea por DB, no explicitado en `store()`.
+- [ ] Si Yanet usa rangos de fecha muy amplios en el reporte, considerar paginar o subir memory_limit FPM.
