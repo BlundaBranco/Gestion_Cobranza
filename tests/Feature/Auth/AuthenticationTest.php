@@ -21,8 +21,9 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
+        // El login de esta app es por username, no por email (LoginRequest)
         $response = $this->post('/login', [
-            'email' => $user->email,
+            'username' => $user->username,
             'password' => 'password',
         ]);
 
@@ -35,7 +36,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->post('/login', [
-            'email' => $user->email,
+            'username' => $user->username,
             'password' => 'wrong-password',
         ]);
 
