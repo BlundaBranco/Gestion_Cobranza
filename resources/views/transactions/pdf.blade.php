@@ -38,6 +38,18 @@
             color: #777;
             letter-spacing: 1px;
         }
+        .reprint-tag {
+            position: absolute;
+            top: 4px;
+            right: 120px;
+            font-size: 9px;
+            font-weight: bold;
+            color: #b91c1c;
+            background: #fee2e2;
+            padding: 2px 8px;
+            border: 1px solid #fca5a5;
+            border-radius: 3px;
+        }
 
         /* Header */
         .header { display: table; width: 100%; border-bottom: 2px solid #000; padding-bottom: 8px; }
@@ -115,6 +127,9 @@
     @foreach ($copies as $copyIndex => $copyLabel)
         <div class="receipt-box">
             <span class="copy-tag">{{ $copyLabel }}</span>
+            @if(!empty($isReprint))
+                <span class="reprint-tag">REIMPRESIÓN</span>
+            @endif
 
             {{-- Tabla interna: fila 1 = header+cuerpo (vertical-align top), fila 2 = footer (vertical-align bottom) --}}
             <table style="width: 100%; height: 424px; border-collapse: collapse; table-layout: fixed;">

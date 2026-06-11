@@ -20,6 +20,7 @@
         .cut-label { text-align: center; font-size: 9px; color: #777; margin: 2px 0 6px 0; letter-spacing: 2px; }
         .copy-tag { position: absolute; top: 4px; right: 6px; font-size: 9px; color: #777; letter-spacing: 1px; }
         .extra-tag { position: absolute; top: 4px; left: 15px; font-size: 10px; font-weight: bold; color: #b45309; background: #fef3c7; padding: 2px 8px; border: 1px solid #fcd34d; border-radius: 3px; }
+        .reprint-tag { position: absolute; top: 4px; right: 120px; font-size: 9px; font-weight: bold; color: #b91c1c; background: #fee2e2; padding: 2px 8px; border: 1px solid #fca5a5; border-radius: 3px; }
 
         .header { display: table; width: 100%; border-bottom: 2px solid #000; padding-bottom: 8px; margin-top: 22px; }
         .header-col { display: table-cell; vertical-align: middle; }
@@ -51,6 +52,9 @@
         <div class="receipt-box">
             <span class="extra-tag">COBRO EXTRA</span>
             <span class="copy-tag">{{ $copyLabel }}</span>
+            @if(!empty($isReprint))
+                <span class="reprint-tag">REIMPRESIÓN</span>
+            @endif
 
             {{-- Tabla interna: fila 1 = header+cuerpo (vertical-align top), fila 2 = footer (vertical-align bottom) --}}
             <table style="width: 100%; height: 424px; border-collapse: collapse; table-layout: fixed;">

@@ -357,8 +357,14 @@ class TransactionController extends Controller
         $transaction = Transaction::withTrashed()->findOrFail($id);
         $transaction->load(['client', 'user', 'owner', 'installments.paymentPlan.lot', 'installments.paymentPlan.service']);
 
+        // Impresión 1 = original; de la segunda en adelante el recibo sale marcado REIMPRESIÓN.
+        // withTrashed en el update: los recibos cancelados también se reimprimen y deben contar.
+        $isReprint = $transaction->print_count > 0;
+        Transaction::withTrashed()->whereKey($transaction->id)
+            ->increment('print_count', 1, ['last_printed_at' => now()]);
+
         $view = $transaction->type === 'extra' ? 'transactions.pdf_extra' : 'transactions.pdf';
-        $pdf = PDF::loadView($view, compact('transaction'));
+        $pdf = PDF::loadView($view, compact('transaction', 'isReprint'));
 
         return $pdf->stream('recibo-' . $transaction->folio_number . '.pdf');
     }

@@ -25,9 +25,12 @@ class Transaction extends Model
         'notes',
         'status',
         'cancelled_by',
+        'print_count',
+        'last_printed_at',
     ];
     protected $casts = [
         'payment_date' => 'date',
+        'last_printed_at' => 'datetime',
     ];
 
     public const PAYMENT_METHODS = [
