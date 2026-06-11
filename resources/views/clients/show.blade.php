@@ -469,6 +469,59 @@
                 </div>
             @endif
 
+            {{-- Historial de planes cancelados (lotes revendidos): se conserva aparte,
+                 no suma a la deuda ni al total pagado del cliente --}}
+            @if(isset($cancelledPlans) && $cancelledPlans->isNotEmpty())
+                <div class="bg-white overflow-hidden shadow-lg sm:rounded-xl border border-gray-300">
+                    <div class="bg-gray-100 px-6 py-4 border-b border-gray-300">
+                        <h3 class="text-lg font-bold text-gray-700">Historial — Planes cancelados</h3>
+                        <p class="text-xs text-gray-500 mt-1">Planes dados de baja conservando su historial de pagos para revisión. No afectan la deuda ni los totales actuales.</p>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        @foreach($cancelledPlans as $cancelledPlan)
+                            @php
+                                $cpPaidTotal = $cancelledPlan->installments->reduce(fn($c, $i) => $c + $i->transactions->sum('pivot.amount_applied'), 0);
+                                $cpTransactions = $cancelledPlan->installments->flatMap->transactions->unique('id')->sortBy('payment_date');
+                            @endphp
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="bg-gray-50 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <span class="font-bold text-gray-800">{{ $cancelledPlan->lot->identifier ?? 'Lote' }}</span>
+                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800">{{ $cancelledPlan->service->name ?? 'Servicio' }}</span>
+                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700">CANCELADO</span>
+                                    </div>
+                                    <span class="text-xs text-gray-500">
+                                        Cancelado el {{ $cancelledPlan->cancelled_at?->format('d/m/Y') }}{{ $cancelledPlan->canceller ? ' por ' . $cancelledPlan->canceller->name : '' }}
+                                    </span>
+                                </div>
+                                <div class="px-4 py-3 text-sm text-gray-700 space-y-2">
+                                    <div class="flex flex-wrap gap-x-8 gap-y-1">
+                                        <span>Total del plan: <strong>{{ format_currency($cancelledPlan->total_amount, $cancelledPlan->currency) }}</strong></span>
+                                        <span>Pagado antes de cancelar: <strong class="text-green-700">{{ format_currency($cpPaidTotal, $cancelledPlan->currency) }}</strong></span>
+                                        <span>Cuotas: <strong>{{ $cancelledPlan->installments->count() }}</strong></span>
+                                    </div>
+                                    @if($cancelledPlan->cancellation_notes)
+                                        <p class="text-xs text-gray-500 italic">Motivo: {{ $cancelledPlan->cancellation_notes }}</p>
+                                    @endif
+                                    @if($cpTransactions->isNotEmpty())
+                                        <div class="pt-1">
+                                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Recibos del historial</p>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach($cpTransactions as $cpTx)
+                                                    <a href="{{ route('transactions.pdf', $cpTx->id) }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-200 text-xs text-blue-600 hover:bg-blue-50">
+                                                        {{ $cpTx->folio_number }} — {{ $cpTx->payment_date->format('d/m/Y') }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
         </div>
     </div>
 </x-app-layout>

@@ -147,6 +147,14 @@ class TransactionController extends Controller
         $applyCredit = $request->boolean('apply_credit');
         $selectedInstallments = Installment::with(['transactions', 'paymentPlan.service'])->find($validated['installments']);
         $client = Client::findOrFail($validated['client_id']);
+
+        // Guard: no se cobra sobre cuotas de un plan cancelado (lote revendido).
+        // El form ya las filtra, pero un POST directo no debe poder saltearlo.
+        if ($selectedInstallments->contains(fn ($i) => $i->paymentPlan?->status === 'cancelled')) {
+            return back()
+                ->with('error', 'Una o más cuotas pertenecen a un plan cancelado y no se pueden cobrar.')
+                ->withInput();
+        }
         $creditAvailable = $applyCredit ? (float) $client->credit_balance : 0;
 
         // --- EMISOR DE FOLIO POR SERVICIO ---

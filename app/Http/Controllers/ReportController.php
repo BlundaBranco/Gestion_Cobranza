@@ -91,6 +91,7 @@ class ReportController extends Controller
     public function overdueInstallments(Request $request)
     {
         $query = \App\Models\Installment::where('status', 'vencida')
+            ->whereHas('paymentPlan', fn($q) => $q->where('status', 'active'))
             ->with(['paymentPlan.lot.client', 'paymentPlan.lot', 'transactions'])
             ->when($request->owner_id, fn($q, $v) => $q->whereHas('paymentPlan.lot', fn($sq) => $sq->where('owner_id', $v)))
             ->when($request->block_number, fn($q, $v) => $q->whereHas('paymentPlan.lot', fn($sq) => $sq->where('block_number', 'like', "%$v%")))

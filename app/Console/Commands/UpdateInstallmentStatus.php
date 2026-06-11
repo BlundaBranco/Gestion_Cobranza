@@ -46,10 +46,12 @@ class UpdateInstallmentStatus extends Command
 
     private function markInstallmentsAsOverdue()
     {
+        // Los planes cancelados quedan congelados: sus cuotas no vencen ni generan interés.
         $updatedCount = Installment::where('status', 'pendiente')
             ->where('due_date', '<', Carbon::today())
+            ->whereHas('paymentPlan', fn($q) => $q->where('status', 'active'))
             ->update(['status' => 'vencida']);
-            
+
         $this->info("Cuotas marcadas como 'vencida': {$updatedCount}");
     }
 
@@ -58,7 +60,9 @@ class UpdateInstallmentStatus extends Command
         $interestAppliedCount = 0;
         
         // Obtener todas las cuotas vencidas que no estén completamente pagadas
+        // (solo de planes activos: los cancelados quedan con el interés congelado)
         $overdueInstallments = Installment::where('status', 'vencida')
+            ->whereHas('paymentPlan', fn($q) => $q->where('status', 'active'))
             ->with('transactions')
             ->get();
 
@@ -92,12 +96,15 @@ class UpdateInstallmentStatus extends Command
     {
         $liquidatedLots = 0;
         
+        // Solo cuentan los planes ACTIVOS: la deuda de un plan cancelado
+        // (lote revendido) no debe impedir ni provocar la liquidación.
         $potentialLotsToLiquidate = Lot::where('status', 'vendido')
-            ->whereDoesntHave('paymentPlans.installments', function ($query) {
-                $query->whereIn('status', ['pendiente', 'vencida']);
+            ->whereDoesntHave('paymentPlans', function ($query) {
+                $query->where('status', 'active')
+                    ->whereHas('installments', fn($q) => $q->whereIn('status', ['pendiente', 'vencida']));
             })
-            ->has('paymentPlans')
-            ->with('paymentPlans.installments.transactions')
+            ->whereHas('paymentPlans', fn($q) => $q->where('status', 'active'))
+            ->with(['paymentPlans' => fn($q) => $q->where('status', 'active'), 'paymentPlans.installments.transactions'])
             ->get();
 
         foreach ($potentialLotsToLiquidate as $lot) {

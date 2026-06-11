@@ -42,9 +42,11 @@ class PaymentPlanController extends Controller
         sort($dates); // Ordenar ascendente
         $realStartDate = $dates[0];
 
-        // 3. Validar duplicados
+        // 3. Validar duplicados — solo contra planes ACTIVOS:
+        // un plan cancelado (lote revendido) no bloquea dar de alta uno nuevo.
         $exists = \App\Models\PaymentPlan::where('lot_id', $lot->id)
             ->where('service_id', $validated['service_id'])
+            ->where('status', 'active')
             ->exists();
 
         if ($exists) {
@@ -98,6 +100,43 @@ class PaymentPlanController extends Controller
         return back()->with('success', 'La moneda del plan de pago ha sido actualizada.');
     }
 
+
+    /**
+     * Cancela un plan de pago conservando todo su historial (cuotas, pagos y folios).
+     * El lote queda libre para venderse de nuevo al mismo número con un plan limpio.
+     */
+    public function cancel(Request $request, PaymentPlan $plan)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        if ($plan->isCancelled()) {
+            return back()->with('error', 'Este plan ya está cancelado.');
+        }
+
+        $validated = $request->validate([
+            'cancellation_notes' => 'nullable|string|max:1000',
+        ]);
+
+        DB::transaction(function () use ($plan, $validated) {
+            $lot = $plan->lot;
+
+            $plan->update([
+                'status'              => 'cancelled',
+                'cancelled_at'        => now(),
+                'cancelled_by'        => auth()->id(),
+                'cancelled_client_id' => $lot?->client_id,
+                'cancellation_notes'  => $validated['cancellation_notes'] ?? null,
+            ]);
+
+            // Liberar el lote solo si no le quedan planes activos (puede tener
+            // otro servicio vigente, ej. Electrificación).
+            if ($lot && ! $lot->paymentPlans()->where('status', 'active')->exists()) {
+                $lot->update(['status' => 'disponible']);
+            }
+        });
+
+        return back()->with('success', 'Plan cancelado. El historial de pagos queda archivado y el lote puede venderse de nuevo.');
+    }
 
     /**
      * Elimina un plan de pago.

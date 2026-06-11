@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
 
     // --- PLANES DE PAGO ---
     Route::post('lots/{lot}/payment-plans', [PaymentPlanController::class, 'store'])->name('lots.payment-plans.store');
+    Route::post('payment-plans/{plan}/cancel', [PaymentPlanController::class, 'cancel'])->name('payment-plans.cancel');
     Route::delete('payment-plans/{plan}', [PaymentPlanController::class, 'destroy'])->name('payment-plans.destroy');
     
     // --- CUOTAS (INSTALLMENTS) ---

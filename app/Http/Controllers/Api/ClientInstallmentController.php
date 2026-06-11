@@ -13,6 +13,8 @@ class ClientInstallmentController extends Controller
         $installments = Installment::whereHas('paymentPlan.lot', function ($query) use ($client) {
                 $query->where('client_id', $client->id);
             })
+            // Las cuotas de planes cancelados (lote revendido) no se cobran
+            ->whereHas('paymentPlan', fn ($query) => $query->where('status', 'active'))
             ->with(['paymentPlan.service', 'paymentPlan.lot', 'transactions'])
             ->orderBy('due_date', 'asc')
             ->get();

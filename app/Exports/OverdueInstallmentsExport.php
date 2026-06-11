@@ -23,6 +23,7 @@ class OverdueInstallmentsExport implements FromQuery, WithHeadings, WithMapping,
     public function query()
     {
         return Installment::where('status', 'vencida')
+            ->whereHas('paymentPlan', fn($q) => $q->where('status', 'active'))
             ->with(['paymentPlan.lot.client', 'paymentPlan.lot', 'transactions'])
             ->when($this->ownerId, fn($q, $v) => $q->whereHas('paymentPlan.lot', fn($sq) => $sq->where('owner_id', $v)))
             ->when($this->blockNumber, fn($q, $v) => $q->whereHas('paymentPlan.lot', fn($sq) => $sq->where('block_number', 'like', "%$v%")))

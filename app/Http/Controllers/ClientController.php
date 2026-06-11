@@ -58,10 +58,21 @@ class ClientController extends Controller
     public function show(\App\Models\Client $client)
     {
         $client->load([
+            // Solo planes activos: los cancelados van aparte, en el historial
+            'lots.paymentPlans' => fn ($q) => $q->where('status', 'active'),
             'lots.paymentPlans.service',
             'lots.paymentPlans.installments.transactions',
             'documents'
         ]);
+
+        // Historial aparte: planes cancelados donde este cliente era el titular.
+        // Se busca por el snapshot cancelled_client_id porque al revender el lote
+        // lots.client_id pasa al cliente nuevo.
+        $cancelledPlans = \App\Models\PaymentPlan::where('status', 'cancelled')
+            ->where('cancelled_client_id', $client->id)
+            ->with(['service', 'lot', 'installments.transactions', 'canceller'])
+            ->orderByDesc('cancelled_at')
+            ->get();
         
         // Estructura para agrupar estadísticas por moneda (MXN, USD)
         $statsByCurrency = [];
@@ -123,7 +134,7 @@ class ClientController extends Controller
             }
         }
         
-        return view('clients.show', compact('client', 'pendingInstallmentsCount', 'statsByCurrency'));
+        return view('clients.show', compact('client', 'pendingInstallmentsCount', 'statsByCurrency', 'cancelledPlans'));
     }
     
     public function edit(Client $client)

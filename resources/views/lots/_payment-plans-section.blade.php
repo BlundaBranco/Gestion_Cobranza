@@ -304,9 +304,9 @@
         </div>
     </form>
 
-    <!-- Lista de Planes Existentes -->
+    <!-- Lista de Planes Existentes (solo activos; los cancelados van abajo) -->
     <div class="mt-12 space-y-8">
-        @forelse($lot->paymentPlans as $plan)
+        @forelse($lot->paymentPlans->where('status', 'active') as $plan)
             @php
                 // BLOQUE DE CÁLCULO QUE FALTA
                 $totalInstallments = $plan->installments->count();
@@ -337,14 +337,26 @@
                         </div>
                     </div>
                     
-                    @can('delete', $plan)
-                        <form action="{{ route('payment-plans.destroy', $plan) }}" method="POST" onsubmit="return confirm('¿Seguro? Esta acción es irreversible si tiene pagos.');">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors" title="Eliminar Plan">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
-                        </form>
-                    @endcan
+                    <div class="flex items-center gap-1">
+                        @if(auth()->user()->isAdmin())
+                            <form action="{{ route('payment-plans.cancel', $plan) }}" method="POST"
+                                  onsubmit="if(!confirm('¿Cancelar este plan? El historial de pagos queda archivado y el lote podrá venderse de nuevo con un plan limpio.')) return false; this.cancellation_notes.value = prompt('Motivo de la cancelación (opcional):') || ''; return true;">
+                                @csrf
+                                <input type="hidden" name="cancellation_notes" value="">
+                                <button type="submit" class="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-full transition-colors" title="Cancelar plan (conserva el historial de pagos)">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 12.728 9 9 0 0112.728-12.728zM5.636 5.636l12.728 12.728"/></svg>
+                                </button>
+                            </form>
+                        @endif
+                        @can('delete', $plan)
+                            <form action="{{ route('payment-plans.destroy', $plan) }}" method="POST" onsubmit="return confirm('¿Seguro? Esta acción es irreversible si tiene pagos.');">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors" title="Eliminar Plan">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </form>
+                        @endcan
+                    </div>
                 </div>
                 
                 {{-- Barra de Progreso --}}
@@ -371,5 +383,40 @@
                 {{-- ... --}}
             </div>
         @endforelse
+
+        {{-- Planes cancelados: historial archivado, solo lectura --}}
+        @php $cancelledLotPlans = $lot->paymentPlans->where('status', 'cancelled'); @endphp
+        @if($cancelledLotPlans->isNotEmpty())
+            <div class="mt-4">
+                <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Planes cancelados (historial)</h4>
+                <div class="space-y-4">
+                    @foreach($cancelledLotPlans as $cancelledPlan)
+                        @php
+                            $cpPaid = $cancelledPlan->installments->reduce(fn($c, $i) => $c + $i->transactions->sum('pivot.amount_applied'), 0);
+                        @endphp
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <span class="font-bold text-gray-700">{{ $cancelledPlan->service->name ?? 'Servicio' }}</span>
+                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700">CANCELADO</span>
+                                </div>
+                                <span class="text-xs text-gray-500">
+                                    Cancelado el {{ $cancelledPlan->cancelled_at?->format('d/m/Y') }}
+                                    @if($cancelledPlan->cancelledClient) — titular: {{ $cancelledPlan->cancelledClient->name }} @endif
+                                </span>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-600 flex flex-wrap gap-x-8 gap-y-1">
+                                <span>Total: <strong>{{ format_currency($cancelledPlan->total_amount, $cancelledPlan->currency) }}</strong></span>
+                                <span>Pagado: <strong class="text-green-700">{{ format_currency($cpPaid, $cancelledPlan->currency) }}</strong></span>
+                                <span>Cuotas: <strong>{{ $cancelledPlan->installments->count() }}</strong></span>
+                            </div>
+                            @if($cancelledPlan->cancellation_notes)
+                                <p class="mt-1 text-xs text-gray-500 italic">Motivo: {{ $cancelledPlan->cancellation_notes }}</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 </div>

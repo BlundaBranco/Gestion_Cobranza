@@ -38,7 +38,7 @@ class LotController extends Controller
 
         $lots->getCollection()->transform(function ($lot) {
             $totalLotDebt = 0;
-            $paymentPlans = $lot->paymentPlans()->with(['installments.transactions', 'service'])->get();
+            $paymentPlans = $lot->paymentPlans()->where('status', 'active')->with(['installments.transactions', 'service'])->get();
 
             if ($paymentPlans->isNotEmpty()) {
                 $lot->payment_plans_summary = $paymentPlans->map(function ($plan) use (&$totalLotDebt) {
