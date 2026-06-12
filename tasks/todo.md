@@ -1,15 +1,16 @@
 # Tareas activas
 
-## 🟠 En curso 2026-06-11 — pack 190 USD (NO deployado aún)
+## ✅ Completadas 2026-06-12 — pack 190 USD DEPLOYADO
 
 - [x] Columna Usuario en reporte de ingresos + Excel. Commit `2d44e89`. (pack 50 USD con cortes)
 - [x] Corte diario descargable para no-admin (filtro forzado por su user_id, sin totales). Commit `2d44e89`.
 - [x] Marca REIMPRESIÓN en recibos desde la 2da impresión (`print_count` + badge en ambos PDFs). Commit `f10103c`. (40 USD)
 - [x] Cancelación de plan de pago conservando historial + reventa de lote. Commit `8af2aff`. (100 USD)
-- [x] Suite completa en verde (84/84): `username` en UserFactory + tests scaffold alineados. Commit `c39c186`.
-- [ ] Review adversarial del diff — aplicar fixes confirmados si los hay.
-- [ ] **Deploy a prod** (requiere `migrate --force`: 2 migrations nuevas). Esperando OK del user.
-- [ ] Avisar a Yanet que está entregado (mensajes redactados).
+- [x] Suite completa en verde (87/87): `username` en UserFactory + tests scaffold alineados. Commit `c39c186`.
+- [x] Review adversarial del diff — 3 bugs confirmados y fixeados. Commit `0246608`.
+- [x] **Deploy a prod** (`0246608`): backup + migrate --force (2 migrations) + cachés. Verificado sobre datos reales (9117 txns / 411 planes intactos, smoke render OK).
+- [ ] Avisar a Yanet que está entregado (3 mensajes redactados, los envía el user).
+- [ ] (Opcional) Refinar para que la auto-apertura del PDF post-cobro no cuente como impresión 1.
 
 ## ✅ Completadas 2026-06-01
 
