@@ -92,6 +92,28 @@ if (!function_exists('number_to_words_es_recursive')) {
 }
 
 
+if (!function_exists('installment_payment_split')) {
+    /**
+     * Reparte un monto pagado a una cuota entre capital e interés con la
+     * convención CAPITAL PRIMERO: el pago cubre primero el capital (monto base)
+     * y recién después el interés. Es ESTABLE porque depende solo del monto base
+     * y de lo pagado, nunca del interest_amount —que el recálculo de mora cambia
+     * con el tiempo y haría que un recibo ya impreso muestre otro reparto—.
+     *
+     * @param float $base       Monto base (capital) de la cuota.
+     * @param float $paidBefore Suma ya aplicada a la cuota por cobros anteriores.
+     * @param float $amount     Monto aplicado por este cobro (o el total, para agregados).
+     * @return array{capital: float, interest: float}
+     */
+    function installment_payment_split(float $base, float $paidBefore, float $amount): array
+    {
+        $capitalRemaining = max(0.0, $base - $paidBefore);
+        $capital = min($amount, $capitalRemaining);
+
+        return ['capital' => $capital, 'interest' => $amount - $capital];
+    }
+}
+
 if (!function_exists('format_currency')) {
     function format_currency(float $amount, ?string $currency = 'MXN'): string
     {

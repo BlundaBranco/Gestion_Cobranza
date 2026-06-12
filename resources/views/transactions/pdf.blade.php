@@ -202,12 +202,13 @@
                                                 @foreach($installments as $installment)
                                                     @php
                                                         $paidPrev = $installment->transactions->where('id', '<', $transaction->id)->sum('pivot.amount_applied');
-                                                        $interestTotal = $installment->interest_amount;
-                                                        $interestPending = max(0, $interestTotal - $paidPrev);
-
+                                                        $base = $installment->amount ?? $installment->base_amount;
                                                         $applied = $installment->pivot->amount_applied;
-                                                        $interestPaid = min($applied, $interestPending);
-                                                        $capitalPaid = $applied - $interestPaid;
+
+                                                        // Capital primero: el reparto queda fijo aunque la mora recalcule el interés.
+                                                        $split = installment_payment_split($base, $paidPrev, $applied);
+                                                        $capitalPaid = $split['capital'];
+                                                        $interestPaid = $split['interest'];
 
                                                         $mes = ucfirst($installment->due_date->translatedFormat('F Y'));
                                                         $num = $installment->installment_number == 0 ? 'Eng' : '#'.$installment->installment_number;

@@ -16,17 +16,16 @@
                 $due    = $base + $int;
                 $remain = $due - $paid;
 
+                $split = installment_payment_split($base, 0, $paid);
                 if ($remain > 0.01) {
                     $s['pending_installments']++;
                     if ($inst->status === 'vencida') $s['months_overdue']++;
-                    $piOnDebt = min($paid, $int);
-                    $s['debt_interest'] += $int - $piOnDebt;
-                    $s['debt_capital']  += $base - ($paid - $piOnDebt);
+                    $s['debt_interest'] += max(0, $int - $split['interest']);
+                    $s['debt_capital']  += max(0, $base - $split['capital']);
                     $s['total_debt']    += $remain;
                 }
-                $pi = min($paid, $int);
-                $s['paid_interest'] += $pi;
-                $s['paid_capital']  += $paid - $pi;
+                $s['paid_interest'] += $split['interest'];
+                $s['paid_capital']  += $split['capital'];
                 $s['total_paid']    += $paid;
             }
         @endphp

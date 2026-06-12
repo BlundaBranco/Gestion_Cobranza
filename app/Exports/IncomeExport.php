@@ -94,26 +94,14 @@ class IncomeExport implements FromQuery, WithHeadings, WithMapping, WithStyles, 
         }
 
         foreach ($transaction->installments as $installment) {
-            $interestAmount = (float) $installment->interest_amount;
-            $amountApplied  = (float) $installment->pivot->amount_applied;
+            $base          = (float) ($installment->amount ?? $installment->base_amount);
+            $amountApplied = (float) $installment->pivot->amount_applied;
+            $paidBefore    = (float) $installment->transactions->where('id', '<', $transaction->id)->sum('pivot.amount_applied');
 
-            // Sum the interest already covered by transactions that preceded this one
-            $priorInterestPaid = 0;
-            $priorTransactions = $installment->transactions
-                ->where('id', '!=', $transaction->id)
-                ->sortBy(fn ($tx) => $tx->payment_date->timestamp * 1_000_000 + $tx->id);
-
-            foreach ($priorTransactions as $priorTx) {
-                $pendingInterest    = max(0, $interestAmount - $priorInterestPaid);
-                $priorInterestPaid += min((float) $priorTx->pivot->amount_applied, $pendingInterest);
-            }
-
-            $pendingInterest        = max(0, $interestAmount - $priorInterestPaid);
-            $interestInCurrentTx    = min($amountApplied, $pendingInterest);
-            $capitalInCurrentTx     = $amountApplied - $interestInCurrentTx;
-
-            $capitalPaid  += $capitalInCurrentTx;
-            $interestPaid += $interestInCurrentTx;
+            // Capital primero: mismo criterio que el recibo, estable ante el recálculo de mora.
+            $split = installment_payment_split($base, $paidBefore, $amountApplied);
+            $capitalPaid  += $split['capital'];
+            $interestPaid += $split['interest'];
         }
 
         if ($currency === 'USD') {

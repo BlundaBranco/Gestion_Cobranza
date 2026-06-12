@@ -239,17 +239,16 @@
                                     $ldDue     = $ldBase + $ldInt;
                                     $ldRemain  = $ldDue - $ldPaid;
 
+                                    $ldSplit = installment_payment_split($ldBase, 0, $ldPaid);
                                     if ($ldRemain > 0.01) {
                                         $ld['pending_installments']++;
                                         if ($inst->status === 'vencida') $ld['months_overdue']++;
-                                        $piOnDebt = min($ldPaid, $ldInt);
-                                        $ld['debt_interest'] += $ldInt - $piOnDebt;
-                                        $ld['debt_capital']  += $ldBase - ($ldPaid - $piOnDebt);
+                                        $ld['debt_interest'] += max(0, $ldInt - $ldSplit['interest']);
+                                        $ld['debt_capital']  += max(0, $ldBase - $ldSplit['capital']);
                                         $ld['total_debt']    += $ldRemain;
                                     }
-                                    $pi = min($ldPaid, $ldInt);
-                                    $ld['paid_interest'] += $pi;
-                                    $ld['paid_capital']  += $ldPaid - $pi;
+                                    $ld['paid_interest'] += $ldSplit['interest'];
+                                    $ld['paid_capital']  += $ldSplit['capital'];
                                     $ld['total_paid']    += $ldPaid;
                                 }
                             @endphp

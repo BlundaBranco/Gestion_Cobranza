@@ -105,9 +105,10 @@ class ClientController extends Controller
                 // Calcular deuda restante
                 $remainingTotal = $totalAmount - $totalPaidForInstallment;
 
-                // Desglose de lo PAGADO: Asumimos que se paga primero interés, luego capital
-                $paidInterest = min($totalPaidForInstallment, $interestAmount);
-                $paidCapital = $totalPaidForInstallment - $paidInterest;
+                // Desglose de lo PAGADO: capital primero (estable, no depende del interés por mora)
+                $split = installment_payment_split($baseAmount, 0, $totalPaidForInstallment);
+                $paidCapital = $split['capital'];
+                $paidInterest = $split['interest'];
 
                 // Acumular Pagado
                 $statsByCurrency[$currency]['total_paid'] += $totalPaidForInstallment;

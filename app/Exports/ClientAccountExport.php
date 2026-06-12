@@ -56,8 +56,10 @@ class ClientAccountExport implements FromView, ShouldAutoSize, WithStyles
 
                     $lotSummaries[$lot->id][$currency]['total_from_installments'] += $base;
 
-                    $paidInterest = min($paid, $interest);
-                    $paidCapital  = $paid - $paidInterest;
+                    // Capital primero: estable, no depende del interés recalculado por mora.
+                    $split        = installment_payment_split($base, 0, $paid);
+                    $paidCapital  = $split['capital'];
+                    $paidInterest = $split['interest'];
 
                     $lotSummaries[$lot->id][$currency]['paid_interest'] += $paidInterest;
                     $lotSummaries[$lot->id][$currency]['paid_capital']  += $paidCapital;
@@ -65,8 +67,8 @@ class ClientAccountExport implements FromView, ShouldAutoSize, WithStyles
 
                     $remaining = ($base + $interest) - $paid;
                     if ($remaining > 0.005) {
-                        $lotSummaries[$lot->id][$currency]['debt_interest'] += ($interest - $paidInterest);
-                        $lotSummaries[$lot->id][$currency]['debt_capital']  += ($base - $paidCapital);
+                        $lotSummaries[$lot->id][$currency]['debt_interest'] += max(0, $interest - $paidInterest);
+                        $lotSummaries[$lot->id][$currency]['debt_capital']  += max(0, $base - $paidCapital);
                         $lotSummaries[$lot->id][$currency]['total_debt']    += $remaining;
                     }
                 }
