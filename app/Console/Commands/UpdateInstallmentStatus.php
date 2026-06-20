@@ -22,6 +22,11 @@ class UpdateInstallmentStatus extends Command
 
         DB::beginTransaction();
         try {
+            // --- FASE 0: Revertir cuotas reprogramadas al futuro ---
+            // Si una cuota 'vencida' se editó a una fecha de vencimiento futura,
+            // ya no está en mora y debe volver a 'pendiente' sin interés.
+            $this->revertRescheduledInstallments();
+
             // --- FASE 1: Marcar cuotas como vencidas ---
             $this->markInstallmentsAsOverdue();
 
@@ -42,6 +47,19 @@ class UpdateInstallmentStatus extends Command
             Log::error('Error en UpdateInstallmentStatus', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return Command::FAILURE;
         }
+    }
+
+    private function revertRescheduledInstallments()
+    {
+        // Una cuota que estaba 'vencida' pero cuyo vencimiento se reprogramó a hoy o
+        // al futuro ya no está en mora: vuelve a 'pendiente' y se le quita el interés.
+        // (Las cuotas 'pagada' no se tocan: un pago no se revierte por mover la fecha.)
+        $reverted = Installment::where('status', 'vencida')
+            ->where('due_date', '>=', Carbon::today())
+            ->whereHas('paymentPlan', fn($q) => $q->where('status', 'active'))
+            ->update(['status' => 'pendiente', 'interest_amount' => 0]);
+
+        $this->info("Cuotas revertidas a 'pendiente' (vencimiento futuro): {$reverted}");
     }
 
     private function markInstallmentsAsOverdue()
